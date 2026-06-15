@@ -12,7 +12,8 @@ from ..types import DataItem
 from .base import BaseEmitter
 from .convert import to_messages
 
-# ChatML role -> ShareGPT `from`
+# ChatML role -> ShareGPT `from`. Unknown roles (e.g. multi-agent `agent1`/`agent2`)
+# are preserved verbatim so role-conditioned multi-agent transcripts survive the export.
 _SHAREGPT_FROM = {"user": "human", "assistant": "gpt", "system": "system", "tool": "observation"}
 
 
@@ -35,6 +36,6 @@ class ShareGPTEmitter(BaseEmitter):
         msgs = [m for m in to_messages(item) if m.get("content", "").strip()]
         if len(msgs) < 2:
             return None
-        convs = [{"from": _SHAREGPT_FROM.get(m["role"], "human"), "value": m["content"]}
+        convs = [{"from": _SHAREGPT_FROM.get(m["role"], m["role"]), "value": m["content"]}
                  for m in msgs]
         return {"conversations": convs}

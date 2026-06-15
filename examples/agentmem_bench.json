@@ -1,0 +1,6 @@
+[
+  {"backend": "vector", "ok": true, "stored": 12, "write_s": 0.3, "query_ms": 4.1,
+   "hit1": 0.42, "hit3": 0.55, "clean": 0.38, "mrr": 0.49},
+  {"backend": "mem0", "ok": true, "stored": 12, "write_s": 6.2, "query_ms": 88.0,
+   "hit1": 0.58, "hit3": 0.71, "clean": 0.50, "mrr": 0.63}
+]

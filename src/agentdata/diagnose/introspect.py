@@ -21,6 +21,7 @@ _SIGNALS: dict[str, tuple[str, ...]] = {
     "temporal": ("timeline", "temporal", "date", "history", "over time"),
     "domain": ("domain", "corpus", "knowledge base", "guideline", "reference"),
     "multi_hop": ("multi-hop", "multi_hop", "cross-reference", "combine", "aggregate"),
+    "multi_agent": ("multi-agent", "multi_agent", "role", "orchestrat", "delegate", "sub-agent"),
 }
 
 _TEXT_EXTS = (".md", ".py", ".txt", ".json", ".yaml", ".yml", ".toml", ".js", ".ts")

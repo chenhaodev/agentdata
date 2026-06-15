@@ -55,18 +55,29 @@ def _cluster(items: list[DataItem], min_overlap: int = 2) -> list[list[DataItem]
 
 
 def recombine(items: list[DataItem], provider: LLMProvider | None = None,
-              max_per_cluster: int = 4, limit: int = 0) -> list[DataItem]:
-    """Produce recombined multi-turn sessions, one per qualifying cluster."""
+              max_per_cluster: int = 4, limit: int = 0,
+              multi_agent: bool = False) -> list[DataItem]:
+    """Produce recombined multi-turn sessions, one per qualifying cluster.
+
+    `multi_agent=True` turns each cluster into a **role-conditioned multi-agent
+    transcript**: every recombined subject's assistant turns are relabeled to a
+    distinct agent role (`agent1`, `agent2`, ...), so the output is a multi-party
+    dialogue suitable for training/evaluating multi-agent systems (the chat/sharegpt
+    emitters preserve these roles)."""
     provider = provider or get_provider("mock")
     out: list[DataItem] = []
     for cluster in _cluster(items):
         members = cluster[:max_per_cluster]
         merged: list[dict[str, str]] = []
         sources: list[str] = []
-        for m in members:
-            for msg in (m.messages if m.kind == KIND_MESSAGES else _as_turn(m)):
-                if msg.get("content", "").strip():
-                    merged.append(msg)
+        for i, m in enumerate(members):
+            turns = m.messages if m.kind == KIND_MESSAGES else _as_turn(m)
+            for msg in turns:
+                if not msg.get("content", "").strip():
+                    continue
+                if multi_agent and msg.get("role") == "assistant":
+                    msg = {**msg, "role": f"agent{i + 1}"}  # distinct agent per subject
+                merged.append(msg)
             src = m.meta.get("source")
             if src and src not in sources:
                 sources.append(src)
@@ -75,7 +86,8 @@ def recombine(items: list[DataItem], provider: LLMProvider | None = None,
         item = DataItem(
             kind=KIND_MESSAGES, messages=merged,
             meta={"source": "recombine", "synthetic": True, "gen": "recombine",
-                  "recombined_from": sources, "n_subjects": len(members)},
+                  "recombined_from": sources, "n_subjects": len(members),
+                  "multi_agent": multi_agent},
         )
         out.append(item)
         if limit and len(out) >= limit:

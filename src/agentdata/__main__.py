@@ -27,10 +27,18 @@ from .types import Recipe
 
 
 def _cmd_sources(args, config: Config) -> int:
+    if args.search:  # popularity-ranked Hub discovery (likes matter)
+        from .sources.huggingface import HuggingFaceSource
+
+        print(f"huggingface datasets for {args.search!r} (by likes):")
+        for d in HuggingFaceSource(config).search(args.search, limit=args.limit):
+            print(f"  likes={d['likes']:<5} dl={d['downloads']:<8} hf:{d['id']}")
+        return 0
     print("sources: local, huggingface (hf), kaggle, physionet, github (gh)\n")
-    print("huggingface named recipes:")
+    print("huggingface named recipes (likes@registration):")
     for alias, info in REGISTRY.items():
-        print(f"  hf:{alias}  -> {info['dataset_id']}  {info.get('tags', [])}")
+        pop = f"likes={info.get('likes', '?')} dl={info.get('downloads', '?')}"
+        print(f"  hf:{alias}  -> {info['dataset_id']}  [{pop}]  {info.get('tags', [])}")
     print("\nlocal files in DATA_DIR:")
     for f in build_source("local", config).list():
         print(f"  local:{f}")
@@ -130,7 +138,9 @@ def build_parser() -> argparse.ArgumentParser:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    sub.add_parser("sources", help="list sources + HF registry + local files")
+    srcp = sub.add_parser("sources", help="list sources + HF registry + local files")
+    srcp.add_argument("--search", help="rank Hub datasets by likes for this query")
+    srcp.add_argument("--limit", type=int, default=10, help="search result count")
 
     d = sub.add_parser("diagnose", help="diagnose weaknesses -> Recipe")
     d.add_argument("--report", help="eval scores JSON")

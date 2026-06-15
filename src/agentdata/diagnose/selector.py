@@ -46,6 +46,13 @@ RULES: dict[str, Rule] = {
     "intent": Rule("sft", ["intent"], ["local"], "sft", {"synth": True}),
     "domain": Rule("continue_pretrain", ["domain"], ["local"], "pretrain"),
     "multimodal": Rule("sft", ["multimodal"], ["local"], "chat"),
+    # weak retrieval on a memory benchmark (e.g. agentmem) → long-conversation data,
+    # recombined into denser multi-session timelines (LoCoMo persona+event method).
+    "memory": Rule("sft", ["conversational", "long-term-memory", "temporal", "multi_hop"],
+                   ["hf:locomo"], "chat", {"recombine": True}),
+    # no multi-agent / role-coordination data → role-conditioned recombined transcripts
+    "multi_agent": Rule("sft", ["multi_agent", "conversational"], ["local"], "chat",
+                        {"recombine": True, "multi_agent": True}),
 }
 
 # fallback when there are no recognized gaps

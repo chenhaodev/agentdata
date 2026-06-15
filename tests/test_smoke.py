@@ -212,6 +212,24 @@ def test_diagnosis_introspect_scan():
     print("ok  introspect scan flags missing capabilities from a SKILL.md")
 
 
+def test_diagnose_memory_benchmark():
+    """A memory-retrieval benchmark (agentmem's {hit1,hit3,clean,mrr} per backend) is
+    diagnosed: weakest backend chosen, timings ignored, → LoCoMo-recombined recipe."""
+    report = [
+        {"backend": "vector", "ok": True, "stored": 12, "write_s": 0.3, "query_ms": 4.1,
+         "hit1": 0.42, "hit3": 0.55, "clean": 0.38, "mrr": 0.49},
+        {"backend": "mem0", "ok": True, "stored": 12, "write_s": 6.2, "query_ms": 88.0,
+         "hit1": 0.58, "hit3": 0.71, "clean": 0.50, "mrr": 0.63},
+    ]
+    dx, recipe = Diagnoser(Config(diagnose_threshold=0.6)).diagnose(report=report)
+    assert "memory" in dx.gaps, dx.gaps
+    assert dx.scores["hit1"] == 0.42, "should pick the weakest backend (vector)"
+    assert "stored" not in dx.scores and "query_ms" not in dx.scores  # timings/counts ignored
+    assert recipe.regime == "sft" and recipe.emit == "chat"
+    assert recipe.sources == ["hf:locomo"] and recipe.generate.get("recombine")
+    print("ok  diagnose ingests an agentmem memory benchmark -> LoCoMo recipe")
+
+
 # -- generate ----------------------------------------------------------------
 
 def test_generate_offline_deterministic():
@@ -231,6 +249,30 @@ def test_generate_offline_deterministic():
     assert seeds[0].meta.get("feedback") is None, "attach_feedback mutated input"
     assert len(keep_high_signal(fb, cap=1)) == 1
     print("ok  synth/recombine/gepa are offline, deterministic, immutable")
+
+
+def test_multi_agent_recombine_and_roundtrip():
+    """multi_agent recombination assigns a distinct agent role per subject, and the
+    chat/sharegpt emitters preserve those roles end-to-end."""
+    subjects = [
+        DataItem(KIND_MESSAGES, messages=[{"role": "user", "content": "plan the trip together"},
+                 {"role": "assistant", "content": "I propose a 3-day route"}],
+                 meta={"source": "t", "tags": ["travel"]}),
+        DataItem(KIND_MESSAGES, messages=[{"role": "user", "content": "plan the trip together"},
+                 {"role": "assistant", "content": "I'd add a budget check"}],
+                 meta={"source": "t", "tags": ["travel"]}),
+    ]
+    rc = recombine(subjects, get_provider("mock"), multi_agent=True)
+    assert rc, "no multi-agent transcript produced"
+    roles = {m["role"] for m in rc[0].messages}
+    assert {"agent1", "agent2"} <= roles, roles  # distinct agents per subject
+    assert rc[0].meta["multi_agent"] is True
+    # roles survive both chat and sharegpt exports
+    chat_row = build_emitter("chat").row(rc[0])
+    assert {"agent1", "agent2"} <= {m["role"] for m in chat_row["messages"]}
+    sg_row = build_emitter("sharegpt").row(rc[0])
+    assert {"agent1", "agent2"} <= {t["from"] for t in sg_row["conversations"]}
+    print("ok  multi-agent recombination + role-preserving chat/sharegpt export")
 
 
 # -- end to end --------------------------------------------------------------

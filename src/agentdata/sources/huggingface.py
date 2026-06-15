@@ -24,8 +24,13 @@ from ..unify.normalize import normalize_row
 from .local import read_records
 
 # named recipes: alias -> resolution. `file` present ⇒ direct-file path; else load_dataset.
+# `likes`/`downloads` snapshot the Hub popularity at registration (2026-06-15): popularity
+# is a real quality signal, so registry picks are the most-liked option that also unifies
+# cleanly. Use `HuggingFaceSource.search(q)` to re-rank live before adding new recipes.
 REGISTRY: dict[str, dict[str, Any]] = {
-    # LoCoMo multiple-choice QA (per-row question_type: single_hop/multi_hop/temporal/...)
+    # LoCoMo multiple-choice QA (per-row question_type: single_hop/multi_hop/temporal/...).
+    # The canonical LoCoMo data lives in the GitHub repo, so all HF mirrors are low-like;
+    # this is the most-liked mirror that ships a clean unifiable file.
     "locomo": {
         "dataset_id": "Percena/locomo-mc10",
         "file": "data/locomo_mc10.json",  # JSONL content despite the .json name
@@ -33,8 +38,10 @@ REGISTRY: dict[str, dict[str, Any]] = {
         "tags": ["conversational", "long-term-memory"],
         "tag_field": "question_type",  # copy each row's category into its tags
         "license": "see-dataset-card",
+        "likes": 7, "downloads": 970,
     },
-    # Claude-Opus distilled reasoning (sharegpt turns carry <think> traces; domain=math)
+    # Claude-Opus distilled reasoning (sharegpt turns carry <think> traces; domain=math).
+    # The most-liked Claude-distilled reasoning set on the Hub.
     "jackrong-claude-opus-distill": {
         "dataset_id": "Jackrong/Claude-opus-4.6-TraceInversion-9000x",
         "file": "claude-opus-4.6-traceInversion-9000x.jsonl",
@@ -42,6 +49,7 @@ REGISTRY: dict[str, dict[str, Any]] = {
         "tags": ["reasoning", "cot", "distilled", "math"],
         "tag_field": "domain",
         "license": "see-dataset-card",
+        "likes": 69, "downloads": 1902,
     },
 }
 
@@ -56,6 +64,24 @@ class HuggingFaceSource:
 
     def list(self, filters: dict[str, Any] | None = None) -> list[str]:
         return sorted(REGISTRY.keys())
+
+    def search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+        """Discover Hub datasets ranked by popularity (likes). Likes/downloads are a
+        real dataset-quality signal — surface them so a human (or a recipe author)
+        picks vetted data instead of the first string match."""
+        try:
+            from huggingface_hub import HfApi  # lazy: optional dep
+        except ImportError as e:
+            raise ImportError(
+                "HuggingFace search needs `huggingface_hub`. Install: pip install 'agentdata[hf]'"
+            ) from e
+        api = HfApi(token=self.config.hf_token or None)
+        out = []
+        for d in api.list_datasets(search=query, sort="likes", limit=limit):
+            out.append({"id": d.id,
+                        "likes": getattr(d, "likes", 0) or 0,
+                        "downloads": getattr(d, "downloads", 0) or 0})
+        return out
 
     def _resolve(self, spec: str) -> dict[str, Any]:
         """Resolve a spec to a registry entry, or a generic {dataset_id, split}."""

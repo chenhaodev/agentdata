@@ -51,7 +51,7 @@ def stage_generate(items: list[DataItem], recipe: Recipe, config: Config) -> lis
     if gen.get("recombine") or gen.get("synth"):
         provider = get_provider(config.llm_provider, config.llm_model)  # built only when a generator needs it
         if gen.get("recombine"):
-            out += recombine(items, provider)
+            out += recombine(items, provider, multi_agent=bool(gen.get("multi_agent")))
         if gen.get("synth"):
             out += synth(items, provider, reasoning=_wants_reasoning(recipe))
     if gen.get("gepa"):
