@@ -7,3 +7,4 @@ dist/
 .env
 .data/
 out/
+.claude/settings.local.json

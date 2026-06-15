@@ -15,7 +15,9 @@ from typing import Any
 
 from .config import Config
 from .emit import build_emitter
-from .generate import attach_feedback, get_provider, keep_high_signal, recombine, synth
+from .generate import (
+    attach_feedback, attach_rejected, get_provider, keep_high_signal, recombine, synth,
+)
 from .report import build_report, write_report
 from .select import curriculum_select, dedup
 from .sources import load_sources
@@ -42,10 +44,14 @@ def stage_load(recipe: Recipe, config: Config) -> list[DataItem]:
 
 
 def stage_generate(items: list[DataItem], recipe: Recipe, config: Config) -> list[DataItem]:
-    """Apply synth / recombine / gepa per recipe.generate flags. Additive: generated
-    items extend the loaded pool; gepa annotates the whole pool in place."""
+    """Apply synth / recombine / preference / gepa. Additive: generated items extend
+    the loaded pool; preference attaches a `rejected` so DPO is self-sufficient; gepa
+    annotates the whole pool. Runs whenever a generator is requested *or* the emit
+    format needs it (DPO)."""
     gen = recipe.generate or {}
-    if not gen:
+    # a DPO export needs preference pairs even if the recipe set no generate flags
+    want_preference = bool(gen.get("preference")) or recipe.emit == "dpo"
+    if not gen and not want_preference:
         return items
     out = list(items)
     if gen.get("recombine") or gen.get("synth"):
@@ -54,6 +60,8 @@ def stage_generate(items: list[DataItem], recipe: Recipe, config: Config) -> lis
             out += recombine(items, provider, multi_agent=bool(gen.get("multi_agent")))
         if gen.get("synth"):
             out += synth(items, provider, reasoning=_wants_reasoning(recipe))
+    if want_preference:
+        out = attach_rejected(out, get_provider(config.llm_provider, config.llm_model))
     if gen.get("gepa"):
         out = attach_feedback(out)
         out = keep_high_signal(out, cap=int(gen.get("gepa_cap", 500)))

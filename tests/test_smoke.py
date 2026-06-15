@@ -313,6 +313,29 @@ def test_end_to_end_build():
     print("ok  end-to-end build emits SFT JSONL + manifest with provenance")
 
 
+def test_dpo_self_sufficient():
+    """`--emit dpo` synthesizes preference pairs on its own (no pre-existing rejected):
+    every row has prompt/chosen/rejected with chosen != rejected."""
+    with tempfile.TemporaryDirectory() as d:
+        corpus = os.path.join(d, "c.jsonl")
+        with open(corpus, "w", encoding="utf-8") as f:
+            for i in range(8):
+                f.write(json.dumps({"instruction": f"Explain medical topic {i} in detail "
+                                    "with enough words here", "input": "",
+                                    "output": f"<think>reason {i}</think> A full answer number {i} "
+                                    "with several words of substance"}) + "\n")
+        cfg = Config(data_dir=d, out_dir=os.path.join(d, "out"))
+        recipe = Recipe(sources=[f"local:{corpus}"], emit="dpo", name="dpo", dedup=False)
+        result = DatasetBuilder(cfg).build(recipe)
+        assert result.manifest.count > 0, "DPO produced an empty dataset"
+        with open(result.manifest.path, encoding="utf-8") as f:
+            rows = [json.loads(line) for line in f if line.strip()]
+        assert all({"prompt", "chosen", "rejected"} == set(r) for r in rows)
+        assert all(r["chosen"].strip() != r["rejected"].strip() for r in rows)
+        assert all("<think>" not in r["rejected"] for r in rows)  # degraded: reasoning stripped
+    print("ok  --emit dpo synthesizes non-empty preference pairs (chosen != rejected)")
+
+
 def main():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:

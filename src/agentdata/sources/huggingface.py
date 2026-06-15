@@ -51,6 +51,17 @@ REGISTRY: dict[str, dict[str, Any]] = {
         "license": "see-dataset-card",
         "likes": 69, "downloads": 1902,
     },
+    # Multi-turn agent trajectories (ETO SFT: AlfWorld/SciWorld/WebShop tool-use turns).
+    # sharegpt {from,value} inside a JSON array → unifies directly. The most-liked
+    # agent-trajectory set on the Hub; backs the tool/trajectory optimization row.
+    "agent-trajectory": {
+        "dataset_id": "agent-eto/eto-sft-trajectory",
+        "file": "data/alfworld_sft.json",
+        "format": "json",
+        "tags": ["agent", "trajectory", "tool-use"],
+        "license": "see-dataset-card",
+        "likes": 17, "downloads": 224,
+    },
 }
 
 _RESOLVE = "https://huggingface.co/datasets/{repo}/resolve/main/{file}"
