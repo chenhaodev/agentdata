@@ -81,10 +81,22 @@ Every connector satisfies the `DataSource` Protocol (`list` / `fetch` /
 `to_items` / `load`) and lazy-imports its dep with install guidance. A spec is
 `"<source>[:<arg>]"` (`local:sft.jsonl`, `hf:locomo`, `gh:owner/repo`). A list of
 specs fans out through a `SourceRouter` that concatenates, dedupes by item hash,
-and keeps provenance. The HF registry ships named recipes (`hf:locomo`,
-`hf:jackrong-claude-opus-distill`) plus generic `hf:<dataset_id>`. **PhysioNet
-items carry `meta.redistributable=False` so emitters refuse to write gated raw
-data to shareable outputs** (honors the MIMIC/PhysioNet DUA).
+and keeps provenance. **PhysioNet items carry `meta.redistributable=False` so
+emitters refuse to write gated raw data to shareable outputs** (honors the
+MIMIC/PhysioNet DUA).
+
+The HF registry ships named recipes (plus generic `hf:<dataset_id>[:<split>]`),
+**validated live against the Hub** (2026-06-15):
+
+| recipe | dataset | yields |
+|---|---|---|
+| `hf:locomo` | `Percena/locomo-mc10` | 1986 QA items, per-row `question_type` → `meta.tags` (the diagnosis axes) |
+| `hf:jackrong-claude-opus-distill` | `Jackrong/Claude-opus-4.6-TraceInversion-9000x` | 8669 chat items carrying `<think>` reasoning traces |
+
+Registry entries pin a specific data `file`/`format` (these datasets don't follow
+the default split layout). Downloads prefer `huggingface_hub` (auth + cache + LFS)
+and fall back to a direct `resolve/main` fetch (atomic write + cache reuse) when
+the Hub's Xet/CDN backend is unreachable.
 
 ### Diagnosis → Recipe (the "auto" brain)
 
@@ -116,18 +128,25 @@ LLaMA-Factory `dataset_info` block.
   → the recombination engine.
 - **Claude-Opus distilled SFT** sets + **easy-dataset** export compatibility.
 
-## Tests
+## Tests & benchmark
 
 ```bash
-python tests/test_smoke.py     # offline: no network, no keys
+python tests/test_smoke.py     # offline: no network, no keys (14 checks)
 pytest tests/                  # same, pytest-discovered
-RUN_LIVE=1 pytest tests/       # opt-in live HF/Kaggle/PhysioNet (skipped without creds)
+RUN_LIVE=1 pytest tests/       # opt-in live HF registry pulls (skipped otherwise)
+python benchmark.py            # selection quality on ../dataset (or a synthetic pool)
 ```
 
 The offline suite covers source Protocol conformance, the local source loading
 `../dataset`, every emitter's JSONL validity, alpaca↔sharegpt↔chatml round-trips,
 dedup/curriculum determinism, the DUA gate, the diagnosis→recipe selector,
 generation determinism/immutability, and an end-to-end build with provenance.
+
+`benchmark.py` reports dedup %, difficulty lift (pool → selected), `<think>`
+coverage, the curriculum monotonicity invariant, the quartile budget (≈10/20/30/40),
+and throughput. On a clean-signal pool it hits the budget exactly (Q1/Q2/Q3/Q4 =
+10/20/30/40 %); on flat real corpora it honestly shows where difficulty signal is
+thin.
 
 ## License
 

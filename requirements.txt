@@ -1,0 +1,19 @@
+# Core (required) — local sources, unify, diagnose, emit, select all run on these.
+python-dotenv>=1.0.0    # load .env
+pyyaml>=6.0             # recipe files (.yaml); JSON recipes need no extra dep
+
+# Optional — install only the source(s)/features you use:
+#   HuggingFace source (load_dataset + registry):
+#     pip install "datasets>=2.14.0"
+#   Kaggle source:
+#     pip install "kaggle>=1.6"            # + KAGGLE_USERNAME/KAGGLE_KEY
+#   PhysioNet source (DUA-gated, non-redistributable):
+#     pip install "wfdb>=4.0" "requests>=2.28"
+#   GitHub source:
+#     pip install "requests>=2.28"
+#   Synthetic generation (Anthropic teacher):
+#     pip install "anthropic>=0.40" "numpy>=1.24"
+#   Parquet local files:
+#     pip install pandas pyarrow
+#
+# Or via extras: pip install -e ".[hf]"  / ".[gen]"  / ".[all,dev]"

@@ -46,19 +46,7 @@ class LocalSource:
         path = self._resolve(spec)
         if not os.path.exists(path):
             raise FileNotFoundError(f"local source: no such file {spec!r} (looked in {self.root!r})")
-        ext = os.path.splitext(path)[1].lower()
-        if ext == ".jsonl":
-            return _read_jsonl(path)
-        if ext == ".json":
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-            return data if isinstance(data, list) else [data]
-        if ext == ".csv":
-            with open(path, encoding="utf-8") as f:
-                return list(csv.DictReader(f))
-        if ext == ".parquet":
-            return _read_parquet(path)
-        raise ValueError(f"local source: unsupported extension {ext!r}")
+        return read_records(path)
 
     def to_items(self, raw: list[dict[str, Any]]) -> list[DataItem]:
         return normalize_rows(raw, meta={"source": self.name})
@@ -67,6 +55,25 @@ class LocalSource:
         rows = self.fetch(spec)
         items = normalize_rows(rows, meta={"source": self.name, "spec": spec})
         return items
+
+
+def read_records(path: str, fmt: str | None = None) -> list[dict[str, Any]]:
+    """Read a tabular file into row dicts. `fmt` (jsonl|json|csv|parquet) overrides
+    the file extension — needed when a download keeps a misleading name (e.g. HF's
+    LoCoMo file is JSONL content under a .json extension)."""
+    fmt = (fmt or os.path.splitext(path)[1].lstrip(".")).lower()
+    if fmt == "jsonl":
+        return _read_jsonl(path)
+    if fmt == "json":
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else [data]
+    if fmt == "csv":
+        with open(path, encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+    if fmt == "parquet":
+        return _read_parquet(path)
+    raise ValueError(f"unsupported data format {fmt!r} (expected jsonl|json|csv|parquet)")
 
 
 def _read_jsonl(path: str) -> list[dict[str, Any]]:

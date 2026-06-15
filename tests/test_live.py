@@ -1,7 +1,12 @@
 """Opt-in live tests. Skipped unless RUN_LIVE=1 (so plain `pytest` stays offline).
 
-Exercises the real network paths: a tiny HuggingFace split → unify → emit. Kaggle
-and PhysioNet are gated behind creds and self-skip when absent.
+Exercises the real network paths: the named HuggingFace registry recipes
+(`hf:locomo`, `hf:jackrong-claude-opus-distill`) → unify → emit. The registry ids
++ data files were validated against the Hub on 2026-06-15:
+  - Percena/locomo-mc10 :: data/locomo_mc10.json  → 1986 QA items (question_type tags)
+  - Jackrong/Claude-opus-4.6-TraceInversion-9000x  → 8669 message items (<think> traces)
+Downloads can be slow when the Hub's Xet/CDN backend is unreachable (the source
+falls back to a direct resolve-URL fetch); these are opt-in and not run in CI.
 """
 
 from __future__ import annotations
@@ -20,26 +25,73 @@ def _skip(reason: str) -> bool:
     return True
 
 
-def test_live_hf_roundtrip():
-    if not LIVE:
-        return _skip("RUN_LIVE != 1")
+def _have_hf() -> bool:
     try:
         import datasets  # noqa: F401
+        import huggingface_hub  # noqa: F401
+
+        return True
     except ImportError:
-        return _skip("datasets not installed (pip install 'agentdata[hf]')")
+        return False
+
+
+def test_live_locomo_registry():
+    """LoCoMo recipe loads as QA items carrying per-row question_type tags."""
+    if not LIVE:
+        return _skip("RUN_LIVE != 1")
+    if not _have_hf():
+        return _skip("datasets/huggingface_hub not installed (pip install 'agentdata[hf]')")
+
+    from agentdata.config import Config
+    from agentdata.sources import build_source
+
+    items = build_source("hf", Config(cache_dir=".data/cache")).load("locomo")
+    assert items, "locomo returned no items"
+    assert all(it.kind == "qa" for it in items[:20])
+    # the LoCoMo categories are exactly the diagnosis axes — they must reach meta.tags
+    cats = {t for it in items for t in it.meta.get("tags", [])}
+    assert cats & {"single_hop", "multi_hop", "temporal", "open_domain"}, cats
+    print(f"ok  live locomo: {len(items)} QA items, categories tagged")
+
+
+def test_live_jackrong_registry_has_reasoning():
+    """The distilled reasoning recipe loads as chat items with <think> traces."""
+    if not LIVE:
+        return _skip("RUN_LIVE != 1")
+    if not _have_hf():
+        return _skip("datasets/huggingface_hub not installed")
+
+    from agentdata.config import Config
+    from agentdata.emit.convert import to_messages
+    from agentdata.sources import build_source
+
+    items = build_source("hf", Config(cache_dir=".data/cache")).load("jackrong-claude-opus-distill")
+    assert items, "jackrong returned no items"
+    with_think = sum(1 for it in items[:200]
+                     if any("<think>" in m["content"]
+                            for m in to_messages(it) if m["role"] == "assistant"))
+    assert with_think > 0, "no <think> reasoning traces found in distilled set"
+    print(f"ok  live jackrong: {len(items)} items, {with_think}/200 carry <think> traces")
+
+
+def test_live_hf_build_roundtrip():
+    """End-to-end: registry recipe → unify → SFT emit → non-empty manifest."""
+    if not LIVE:
+        return _skip("RUN_LIVE != 1")
+    if not _have_hf():
+        return _skip("datasets/huggingface_hub not installed")
 
     from agentdata import Config, DatasetBuilder, Recipe
 
-    # a small, public dataset id; override with AGENTDATA_LIVE_HF if needed
-    spec = os.getenv("AGENTDATA_LIVE_HF", "hf:tatsu-lab/alpaca:train[:50]")
     with tempfile.TemporaryDirectory() as d:
-        cfg = Config(out_dir=os.path.join(d, "out"))
+        cfg = Config(cache_dir=".data/cache", out_dir=os.path.join(d, "out"))
         result = DatasetBuilder(cfg).build(
-            Recipe(sources=[spec], emit="sft", size=10, name="live_hf")
+            Recipe(sources=["hf:locomo"], emit="sft", size=50, name="live_locomo")
         )
         assert result.manifest.count > 0, "live HF build produced nothing"
         assert os.path.exists(result.manifest.path)
-    print(f"ok  live HF roundtrip: {result.manifest.count} samples from {spec}")
+        assert result.report["provenance"]["by_source"].get("huggingface", 0) > 0
+    print(f"ok  live HF build: {result.manifest.count} SFT samples from hf:locomo")
 
 
 def main():
