@@ -10,7 +10,6 @@ handling). Each missing signal becomes a gap with score 0.0; present signals sco
 from __future__ import annotations
 
 import os
-from typing import Any
 
 from ..types import Diagnosis
 

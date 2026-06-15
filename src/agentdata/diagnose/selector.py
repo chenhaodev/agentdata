@@ -78,9 +78,14 @@ def select(diagnosis: Diagnosis, out_dir: str = "out", name: str = "dataset") ->
     for r in rules:
         generate.update(r.generate)
 
-    # emit: align to the dominant regime, else the first matched rule's emit
+    # emit: align to the dominant regime, else the first matched rule's emit.
+    # GRPO's *data* deliverable is the high-signal SFT set (distilled reasoning);
+    # the verifiable-reward/preference pairs are a trainer concern, not data we can
+    # honestly fabricate here, so we don't default GRPO to an (empty) DPO export.
+    # Explicit DPO regime keeps the DPO export — but only paired sources carrying a
+    # `rejected` answer will yield rows.
     emit = {"pretrain": "pretrain", "continue_pretrain": "pretrain",
-            "grpo": "dpo", "dpo": "dpo"}.get(regime, rules[0].emit)
+            "grpo": "sft", "dpo": "dpo"}.get(regime, rules[0].emit)
 
     return Recipe(
         regime=regime,

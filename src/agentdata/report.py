@@ -28,9 +28,8 @@ def build_report(recipe: Recipe, items: list[DataItem], manifest: Manifest) -> d
     gated = sum(1 for it in items if it.meta.get("redistributable") is False)
     synthetic = sum(1 for it in items if it.meta.get("synthetic"))
     record = {
-        **manifest.as_dict(),
+        **manifest.as_dict(),  # already carries gaps_addressed + provenance fields
         "recipe": asdict(recipe),
-        "gaps_addressed": recipe.meta.get("gaps_addressed", []),
         "provenance": {
             "by_source": source_breakdown(items),
             "synthetic_items": synthetic,

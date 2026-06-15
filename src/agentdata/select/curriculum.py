@@ -23,21 +23,23 @@ def curriculum_select(items: list[DataItem], n_target: int = 0, seed: int = 42) 
     """
     if not items:
         return []
-    scored = sorted(items, key=score_difficulty)  # ascending difficulty
-    if n_target <= 0 or n_target >= len(scored):
-        return scored
+    # score once (regex + message build is not free; the pool can be huge), then
+    # reuse the cached score everywhere — sort, quartile split, final ordering.
+    paired = sorted(((score_difficulty(it), it) for it in items), key=lambda p: p[0])
+    if n_target <= 0 or n_target >= len(paired):
+        return [it for _s, it in paired]
 
-    n = len(scored)
+    n = len(paired)
     bounds = [0, n // 4, n // 2, 3 * n // 4, n]
-    quartiles = [scored[bounds[i]:bounds[i + 1]] for i in range(4)]
+    quartiles = [paired[bounds[i]:bounds[i + 1]] for i in range(4)]
 
     rng = random.Random(seed)
-    chosen: list[DataItem] = []
+    chosen: list[tuple[float, DataItem]] = []
     for q_items, w in zip(quartiles, _QUARTILE_WEIGHTS):
         if not q_items:
             continue
         budget = min(max(1, round(n_target * w)), len(q_items))
         chosen.extend(rng.sample(q_items, budget))
 
-    chosen.sort(key=score_difficulty)  # easy→hard curriculum order
-    return chosen
+    chosen.sort(key=lambda p: p[0])  # easy→hard curriculum order
+    return [it for _s, it in chosen]

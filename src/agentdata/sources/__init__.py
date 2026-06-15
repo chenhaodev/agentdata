@@ -10,9 +10,6 @@ Mirrors agentmem's backends factory + RouterBackend.
 
 from __future__ import annotations
 
-import re
-from typing import Any
-
 from ..config import Config
 from ..types import DataItem
 from .base import DataSource

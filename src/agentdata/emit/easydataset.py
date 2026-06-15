@@ -12,7 +12,6 @@ import os
 from typing import Any
 
 from ..types import DataItem, Manifest
-from .base import collect_provenance
 from .sft import SFTEmitter
 
 
@@ -30,15 +29,13 @@ class EasyDatasetEmitter(SFTEmitter):
     name = "easydataset"
 
     def emit(self, items: list[DataItem], path: str) -> Manifest:
-        manifest = super().emit(items, path)  # writes the Alpaca JSONL + base manifest
-        name = manifest.name
-        info = dataset_info_block(name, os.path.basename(path))
+        # super() writes the Alpaca JSONL and a manifest already tagged with
+        # emit=self.name + provenance; we just add the LLaMA-Factory config block.
+        manifest = super().emit(items, path)
+        info = dataset_info_block(manifest.name, os.path.basename(path))
         info_path = os.path.join(os.path.dirname(os.path.abspath(path)),
-                                 f"{name}.dataset_info.json")
+                                 f"{manifest.name}.dataset_info.json")
         with open(info_path, "w", encoding="utf-8") as f:
             json.dump(info, f, ensure_ascii=False, indent=2)
-        manifest.emit = self.name
         manifest.stats["dataset_info_path"] = info_path
-        sources, licenses = collect_provenance(items)
-        manifest.sources, manifest.licenses = sources, licenses
         return manifest

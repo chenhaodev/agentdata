@@ -47,12 +47,13 @@ def stage_generate(items: list[DataItem], recipe: Recipe, config: Config) -> lis
     gen = recipe.generate or {}
     if not gen:
         return items
-    provider = get_provider(config.llm_provider, config.llm_model)
     out = list(items)
-    if gen.get("recombine"):
-        out += recombine(items, provider)
-    if gen.get("synth"):
-        out += synth(items, provider, reasoning=_wants_reasoning(recipe))
+    if gen.get("recombine") or gen.get("synth"):
+        provider = get_provider(config.llm_provider, config.llm_model)  # built only when a generator needs it
+        if gen.get("recombine"):
+            out += recombine(items, provider)
+        if gen.get("synth"):
+            out += synth(items, provider, reasoning=_wants_reasoning(recipe))
     if gen.get("gepa"):
         out = attach_feedback(out)
         out = keep_high_signal(out, cap=int(gen.get("gepa_cap", 500)))
