@@ -1,0 +1,10 @@
+{
+  "scores": {
+    "single_hop": 0.82,
+    "multi_hop": 0.41,
+    "temporal": 0.38,
+    "open_domain": 0.71,
+    "math": 0.29,
+    "reasoning": 0.55
+  }
+}

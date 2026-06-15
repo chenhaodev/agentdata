@@ -1,0 +1,14 @@
+# Round-trip the local medical corpus into a curriculum-sorted SFT dataset.
+#   agentdata build --recipe examples/local_to_sft.yaml
+# Reads ../dataset/sft_medical.jsonl (DATA_DIR), unifies, dedupes, hard-biased
+# curriculum-selects 200, emits {instruction,input,output} JSONL + a manifest.
+name: local_to_sft
+regime: sft
+dataset_types: [domain]
+sources:
+  - local:sft_medical.jsonl
+emit: sft
+size: 200
+curriculum: true
+dedup: true
+out_dir: out

@@ -1,0 +1,269 @@
+"""Offline smoke tests for agentdata. Run: python tests/test_smoke.py
+
+No network, no API key, no external services — exercises source Protocol
+conformance, unify round-trips, every emitter, dedup/curriculum determinism, the
+DUA gate, the diagnosis→recipe selector, generation, and an end-to-end build.
+Plain asserts so it runs without pytest; `pytest tests/` also discovers test_*.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import tempfile
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+
+from agentdata import Config, DatasetBuilder, Diagnoser, Recipe  # noqa: E402
+from agentdata.emit import build_emitter  # noqa: E402
+from agentdata.emit.base import Emitter  # noqa: E402
+from agentdata.generate import (  # noqa: E402
+    attach_feedback, get_provider, keep_high_signal, recombine, synth,
+)
+from agentdata.select import curriculum_select, dedup, score_difficulty  # noqa: E402
+from agentdata.sources import build_source, load_sources  # noqa: E402
+from agentdata.sources.base import DataSource  # noqa: E402
+from agentdata.types import KIND_MESSAGES, KIND_QA, KIND_TEXT, DataItem  # noqa: E402
+from agentdata.unify.normalize import normalize_row  # noqa: E402
+
+
+def _msg_item(user="what is X?", asst="X is a thing.", source="t"):
+    return DataItem(KIND_MESSAGES,
+                    messages=[{"role": "user", "content": user},
+                              {"role": "assistant", "content": asst}],
+                    meta={"source": source})
+
+
+# -- sources -----------------------------------------------------------------
+
+def test_source_protocol_conformance():
+    for name in ("local", "huggingface", "kaggle", "physionet", "github"):
+        src = build_source(name, Config())
+        assert isinstance(src, DataSource), f"{name} not a DataSource"
+    print("ok  every source satisfies the DataSource Protocol")
+
+
+def test_unknown_source_errors_clearly():
+    try:
+        build_source("nope", Config())
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "physionet" in str(e)  # error lists known sources
+    print("ok  unknown source raises a helpful ValueError")
+
+
+def test_source_lazy_dep_messages():
+    """Optional-dep sources fail with install guidance, not a raw ImportError."""
+    for name, hint in (("huggingface", "agentdata[hf]"),):
+        try:
+            import datasets  # noqa: F401
+
+            print(f"skip {name}: dep installed; message path not exercised")
+            continue
+        except ImportError:
+            pass
+        try:
+            build_source(name, Config()).fetch("x")
+            assert False, "expected ImportError"
+        except ImportError as e:
+            assert hint in str(e)
+    print("ok  optional-dep sources give install guidance")
+
+
+def test_local_source_loads_dataset_dir():
+    """If ../dataset exists, the local source loads & normalizes real corpora."""
+    cfg = Config(data_dir=os.path.join(os.path.dirname(__file__), "..", "..", "dataset"))
+    src = build_source("local", cfg)
+    files = src.list()
+    if "sft_medical.jsonl" not in files:
+        print("skip local dataset: ../dataset/sft_medical.jsonl not present")
+        return
+    items = src.load("sft_medical.jsonl")
+    assert items and all(it.meta["source"] == "local" for it in items[:5])
+    assert items[0].kind == KIND_MESSAGES
+    print(f"ok  local source loaded {len(items)} items from ../dataset")
+
+
+def test_router_dedup_across_specs():
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "a.jsonl")
+        with open(p, "w", encoding="utf-8") as f:
+            f.write('{"instruction": "dup q", "input": "", "output": "ans"}\n')
+            f.write('{"instruction": "dup q", "input": "", "output": "ans"}\n')
+            f.write('{"instruction": "uniq", "input": "", "output": "ans2"}\n')
+        items = load_sources([f"local:{p}", f"local:{p}"], Config(data_dir=d))
+    keys = {it.content_key() for it in items}
+    assert len(items) == len(keys) == 2, items  # deduped across duplicate specs
+    print("ok  source router dedupes across specs by item hash")
+
+
+# -- unify -------------------------------------------------------------------
+
+def test_unify_roundtrip_formats():
+    alp = normalize_row({"instruction": "Q", "input": "ctx", "output": "A"})
+    sg = normalize_row({"conversations": [{"from": "human", "value": "Q"},
+                                          {"from": "gpt", "value": "A"}]})
+    cm = normalize_row({"messages": [{"role": "user", "content": "Q"},
+                                     {"role": "assistant", "content": "A"}]})
+    qa = normalize_row({"question": "Q", "answer": "A"})
+    pl = normalize_row({"text": "some corpus text"})
+    assert alp.kind == sg.kind == cm.kind == KIND_MESSAGES
+    assert qa.kind == KIND_QA and pl.kind == KIND_TEXT
+    # all message-shaped formats normalize to the same last-turn content
+    assert sg.messages[-1]["content"] == cm.messages[-1]["content"] == "A"
+    assert sg.messages[0]["role"] == "user"  # human -> user
+    assert normalize_row({"instruction": "", "output": ""}) is None  # empty rejected
+    print("ok  unify round-trips alpaca/sharegpt/chatml/qa/plain")
+
+
+# -- emit --------------------------------------------------------------------
+
+def test_each_emitter_valid_jsonl():
+    items = [_msg_item(), DataItem(KIND_QA, question="q?", answer="a", meta={"source": "t"}),
+             DataItem(KIND_TEXT, text="corpus body text here", meta={"source": "t"})]
+    items_dpo = [_msg_item(), DataItem(KIND_MESSAGES,
+                 messages=[{"role": "user", "content": "q"}, {"role": "assistant", "content": "good"}],
+                 meta={"source": "t", "rejected": "bad"})]
+    cases = {"sft": items, "pretrain": items, "chat": items,
+             "sharegpt": items, "easydataset": items, "dpo": items_dpo}
+    with tempfile.TemporaryDirectory() as d:
+        for emit, data in cases.items():
+            emitter = build_emitter(emit)
+            assert isinstance(emitter, Emitter)
+            path = os.path.join(d, f"{emit}.jsonl")
+            m = emitter.emit(data, path)
+            assert m.count >= 1, f"{emit} wrote nothing"
+            with open(path, encoding="utf-8") as f:
+                rows = [json.loads(line) for line in f if line.strip()]
+            assert len(rows) == m.count
+            for r in rows:  # required fields present and non-empty
+                for k in emitter.required:
+                    v = r[k]
+                    if isinstance(v, list):
+                        assert v and v[-1].get("content") or v[-1].get("value")
+                    else:
+                        assert isinstance(v, str) and v.strip()
+    print("ok  every emitter writes valid JSONL with non-empty required fields")
+
+
+def test_easydataset_emits_dataset_info():
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "ed.jsonl")
+        m = build_emitter("easydataset").emit([_msg_item()], path)
+        info_path = m.stats["dataset_info_path"]
+        with open(info_path, encoding="utf-8") as f:
+            info = json.load(f)
+        entry = info["ed"]
+        assert entry["columns"] == {"prompt": "instruction", "query": "input", "response": "output"}
+    print("ok  easydataset emits a LLaMA-Factory dataset_info block")
+
+
+def test_dua_gate_blocks_shareable_emit():
+    gated = _msg_item(source="physionet")
+    gated.meta["redistributable"] = False
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "g.jsonl")
+        m = build_emitter("sft").emit([gated, _msg_item()], path)
+    assert m.count == 1, "gated item leaked into output"
+    assert m.stats["gated_skipped"] == 1
+    print("ok  redistributable=False blocks shareable emit (DUA honored)")
+
+
+# -- select ------------------------------------------------------------------
+
+def test_dedup_and_curriculum_determinism():
+    items = [_msg_item(user=f"q{i}", asst="<think>" + "w " * (i * 30) + "</think> a")
+             for i in range(20)] + [_msg_item(user="q0")]  # one dup of q0
+    dd = dedup(items)
+    assert len(dd) == 20, "dedup miscount"
+    a = curriculum_select(dd, n_target=8, seed=42)
+    b = curriculum_select(dd, n_target=8, seed=42)
+    assert [x.content_key() for x in a] == [x.content_key() for x in b], "not deterministic"
+    # easy→hard ordering
+    scores = [score_difficulty(x) for x in a]
+    assert scores == sorted(scores), "curriculum not easy→hard"
+    print("ok  dedup + curriculum select are deterministic and curriculum-sorted")
+
+
+# -- diagnose ----------------------------------------------------------------
+
+def test_diagnosis_selects_expected_recipe():
+    report = {"scores": {"single_hop": 0.85, "multi_hop": 0.4, "temporal": 0.35,
+                         "math": 0.3, "reasoning": 0.5}}
+    dx, recipe = Diagnoser(Config(diagnose_threshold=0.6)).diagnose(report=report)
+    assert set(dx.gaps) == {"multi_hop", "temporal", "math", "reasoning"}, dx.gaps
+    # math gap -> GRPO regime wins by priority; LoCoMo + distilled sources present
+    assert recipe.regime == "grpo", recipe.regime
+    assert "hf:locomo" in recipe.sources and "hf:jackrong-claude-opus-distill" in recipe.sources
+    assert recipe.generate.get("recombine") and recipe.generate.get("gepa")
+    assert recipe.meta["gaps_addressed"] == dx.gaps
+    print("ok  diagnosis maps temporal/multi_hop/math/reasoning -> correct Recipe")
+
+
+def test_diagnosis_introspect_scan():
+    with tempfile.TemporaryDirectory() as d:
+        skill = os.path.join(d, "SKILL.md")
+        with open(skill, "w", encoding="utf-8") as f:
+            f.write("# A skill that calls tools via MCP and reads a domain corpus.\n")
+        dx = Diagnoser().from_scan(skill)
+    assert "tool_use" not in dx.gaps and "domain" not in dx.gaps  # signals present
+    assert "reasoning" in dx.gaps  # no <think>/reasoning signal
+    print("ok  introspect scan flags missing capabilities from a SKILL.md")
+
+
+# -- generate ----------------------------------------------------------------
+
+def test_generate_offline_deterministic():
+    provider = get_provider("mock")
+    seeds = [DataItem(KIND_TEXT, text="Hypertension is high blood pressure that is chronic and common.",
+                      meta={"source": "t", "tags": ["cardio"]}),
+             DataItem(KIND_TEXT, text="Hypertension raises chronic cardiovascular risk over time.",
+                      meta={"source": "t", "tags": ["cardio"]})]
+    s1 = synth(seeds, provider)
+    s2 = synth(seeds, provider)
+    assert s1 and [x.messages for x in s1] == [x.messages for x in s2], "synth not deterministic"
+    assert "<think>" in s1[0].messages[-1]["content"]  # reasoning trace present
+    rc = recombine(seeds, provider)
+    assert rc and rc[0].meta["gen"] == "recombine" and rc[0].meta["n_subjects"] == 2
+    fb = attach_feedback(s1)
+    assert all("feedback" in x.meta and "trajectory" in x.meta for x in fb)
+    assert seeds[0].meta.get("feedback") is None, "attach_feedback mutated input"
+    assert len(keep_high_signal(fb, cap=1)) == 1
+    print("ok  synth/recombine/gepa are offline, deterministic, immutable")
+
+
+# -- end to end --------------------------------------------------------------
+
+def test_end_to_end_build():
+    with tempfile.TemporaryDirectory() as d:
+        corpus = os.path.join(d, "c.jsonl")
+        with open(corpus, "w", encoding="utf-8") as f:
+            for i in range(12):
+                f.write(json.dumps({"instruction": f"Question number {i} about medicine "
+                                    "with enough words to pass filters", "input": "",
+                                    "output": f"Answer {i}"}) + "\n")
+        cfg = Config(data_dir=d, out_dir=os.path.join(d, "out"))
+        recipe = Recipe(sources=[f"local:{corpus}"], emit="sft", size=6, name="e2e")
+        result = DatasetBuilder(cfg).build(recipe)
+        assert result.manifest.count == 6, result.manifest.count
+        assert os.path.exists(result.manifest.path)
+        assert os.path.exists(result.report_path)
+        with open(result.manifest.path, encoding="utf-8") as f:
+            rows = [json.loads(line) for line in f if line.strip()]
+        assert all({"instruction", "input", "output"} <= set(r) for r in rows)
+        with open(result.report_path, encoding="utf-8") as f:
+            report = json.load(f)
+        assert report["provenance"]["by_source"]["local"] >= 6
+    print("ok  end-to-end build emits SFT JSONL + manifest with provenance")
+
+
+def main():
+    tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+    for t in tests:
+        t()
+    print(f"\n{len(tests)} passed")
+
+
+if __name__ == "__main__":
+    main()
