@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .base import Emitter
 from .chat import ChatEmitter, ShareGPTEmitter
+from .devset import DevsetEmitter
 from .dpo import DPOEmitter
 from .easydataset import EasyDatasetEmitter
 from .pretrain import PretrainEmitter
@@ -16,6 +17,7 @@ _EMITTERS = {
     ChatEmitter.name: ChatEmitter,
     ShareGPTEmitter.name: ShareGPTEmitter,
     EasyDatasetEmitter.name: EasyDatasetEmitter,
+    DevsetEmitter.name: DevsetEmitter,
 }
 
 

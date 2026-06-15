@@ -125,8 +125,8 @@ def test_each_emitter_valid_jsonl():
     items_dpo = [_msg_item(), DataItem(KIND_MESSAGES,
                  messages=[{"role": "user", "content": "q"}, {"role": "assistant", "content": "good"}],
                  meta={"source": "t", "rejected": "bad"})]
-    cases = {"sft": items, "pretrain": items, "chat": items,
-             "sharegpt": items, "easydataset": items, "dpo": items_dpo}
+    cases = {"sft": items, "pretrain": items, "chat": items, "sharegpt": items,
+             "easydataset": items, "devset": items, "dpo": items_dpo}
     with tempfile.TemporaryDirectory() as d:
         for emit, data in cases.items():
             emitter = build_emitter(emit)
@@ -157,6 +157,19 @@ def test_easydataset_emits_dataset_info():
         entry = info["ed"]
         assert entry["columns"] == {"prompt": "instruction", "query": "input", "response": "output"}
     print("ok  easydataset emits a LLaMA-Factory dataset_info block")
+
+
+def test_devset_emitter_for_prompt_optimizers():
+    """The devset emitter backs the prompt-opt path: {input,target} rows + a metric
+    in the manifest (the labeled half GEPA/DSPy consume)."""
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "dev.jsonl")
+        m = build_emitter("devset").emit([_msg_item(user="2+2?", asst="4")], path)
+        assert m.count == 1 and m.stats["metric"] == "exact_match"
+        with open(path, encoding="utf-8") as f:
+            row = json.loads(f.readline())
+        assert set(row) == {"input", "target"} and row["target"] == "4"
+    print("ok  devset emitter yields {input,target} + metric for prompt optimizers")
 
 
 def test_dua_gate_blocks_shareable_emit():
