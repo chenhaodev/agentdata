@@ -29,7 +29,15 @@ kaggle = ["kaggle>=1.6"]                  # kaggle source
 physionet = ["wfdb>=4.0", "requests>=2.28"]  # physionet source (DUA-gated)
 github = ["requests>=2.28"]               # github raw/clone source
 gen = ["anthropic>=0.40", "numpy>=1.24"]  # synthetic generation (teacher LLM)
-train = ["trl>=0.9", "transformers>=4.40", "torch>=2.0", "datasets>=2.14.0"]  # downstream-training proof (train/)
+# downstream-training proof (train/). transformers pinned <5: trl 0.13's DPOTrainer
+# imports a symbol removed in transformers 5.x. Verified pair: trl 0.13 + transformers 4.47.
+train = [
+  "trl>=0.12,<0.14",
+  "transformers>=4.46,<5",
+  "accelerate>=0.34.0",
+  "datasets>=2.21.0",
+  "torch>=2.0",
+]
 all = [
   "datasets>=2.14.0",
   "kaggle>=1.6",
