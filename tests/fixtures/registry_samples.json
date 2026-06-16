@@ -1,0 +1,319 @@
+{
+  "locomo": {
+    "dataset_id": "Percena/locomo-mc10",
+    "sample_row": {
+      "question_id": "conv-26_q0",
+      "question": "When did Caroline go to the LGBTQ support group?",
+      "question_type": "multi_hop",
+      "answer": "7 May 2023",
+      "correct_choice_index": 5,
+      "num_choices": 10,
+      "num_sessions": 19,
+      "choices": [
+        "20 May 2023",
+        "10 May 2023",
+        "6 May 2023",
+        "8 May 2023",
+        "9 May 2023",
+        "7 May 2023"
+      ],
+      "haystack_session_ids": [
+        "session_1",
+        "session_2",
+        "session_3",
+        "session_4",
+        "session_5",
+        "session_6"
+      ],
+      "haystack_session_summaries": [
+        "Caroline and Melanie had a conversation on 8 May 2023 at 1:56 pm. Caroline mentioned that she attended an LGBTQ support group and was inspired by the transgender stories she heard. The support group made her feel accepted and gave her the c",
+        "On May 25, 2023 at 1:14 pm, Melanie tells Caroline about her recent experience running a charity race for mental health. Caroline expresses pride and agrees that taking care of oneself is important. Melanie shares her struggle with self-car",
+        "Caroline and Melanie had a conversation at 7:55 pm on 9 June, 2023. Caroline shared about her school event last week where she talked about her transgender journey and encouraged students to get involved in the LGBTQ community. Melanie prai",
+        "Caroline and Melanie catch up after a long time. Caroline shows Melanie her special necklace, which was a gift from her grandmother in Sweden and represents love, faith, and strength. Melanie admires it and asks if Caroline has any other tr",
+        "Caroline had recently attended an LGBTQ+ pride parade and felt a sense of belonging and community. This experience inspired her to use her own story to help others, possibly through counseling or mental health work. Melanie, in turn, shared",
+        "Caroline and Melanie caught up with each other at 8:18 pm on 6 July, 2023. Caroline shared that since their last chat, she has been exploring counseling or mental health work because she is passionate about helping people. Melanie praised C"
+      ],
+      "haystack_session_datetimes": [
+        "2023-05-08T13:56:00",
+        "2023-05-25T13:14:00",
+        "2023-06-09T19:55:00",
+        "2023-06-27T10:37:00",
+        "2023-07-03T13:36:00",
+        "2023-07-06T20:18:00"
+      ],
+      "haystack_sessions": [
+        [
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Hey Mel! Good to see you! How have you been?"
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Hey Caroline! Good to see you! I'm swamped with the kids & work. What's up with you? Anything new?"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: I went to a LGBTQ support group yesterday and it was so powerful."
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspiring stories?"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: The transgender stories were so inspiring! I was so happy and thankful for all the support."
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Wow, love that painting! So cool you found such a helpful group. What's it done for you?"
+          }
+        ],
+        [
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Hey Caroline, since we last chatted, I've had a lot of things happening to me. I ran a charity race for mental health last Saturday – it was really rewarding. Really made me think about taking care of our minds."
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: That charity race sounds great, Mel! Making a difference & raising awareness for mental health is super rewarding - I'm really proud of you for taking part!"
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Thanks, Caroline! The event was really thought-provoking. I'm starting to realize that self-care is really important. It's a journey for me, but when I look after myself, I'm able to better look after my family."
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: I totally agree, Melanie. Taking care of ourselves is so important - even if it's not always easy. Great that you're prioritizing self-care."
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Yeah, it's tough. So I'm carving out some me-time each day - running, reading, or playing my violin - which refreshes me and helps me stay present for my fam!"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: That's great, Mel! Taking time for yourself is so important. You're doing an awesome job looking after yourself and your family!"
+          }
+        ],
+        [
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Hey Melanie! How's it going? I wanted to tell you about my school event last week. It was awesome! I talked about my transgender journey and encouraged students to get involved in the LGBTQ community. It was great to see their r"
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Hey Caroline! Great to hear from you. Sounds like your event was amazing! I'm so proud of you for spreading awareness and getting others involved in the LGBTQ community. You've come a long way since your transition - keep on insp"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Thanks, Mel! Your backing really means a lot. I felt super powerful giving my talk. I shared my own journey, the struggles I had and how much I've developed since coming out. It was wonderful to see how the audience related to w"
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Wow, Caroline, you're doing an awesome job of inspiring others with your journey. It's great to be part of it and see how you're positively affecting so many. Talking about inclusivity and acceptance is crucial, and you're so bra"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Thanks Mel! Your kind words mean a lot. Sharing our experiences isn't always easy, but I feel it's important to help promote understanding and acceptance. I've been blessed with loads of love and support throughout this journey,"
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Yeah, Caroline! It takes courage to talk about our own stories. But it's in these vulnerable moments that we bond and understand each other. We all have our different paths, but if we share them, we show people that they're not a"
+          }
+        ],
+        [
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Hey Melanie! Long time no talk! A lot's been going on in my life! Take a look at this."
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Hey, Caroline! Nice to hear from you! Love the necklace, any special meaning to it?"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Thanks, Melanie! This necklace is super special to me - a gift from my grandma in my home country, Sweden. She gave it to me when I was young, and it stands for love, faith and strength. It's like a reminder of my roots and all "
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: That's gorgeous, Caroline! It's awesome what items can mean so much to us, right? Got any other objects that you treasure, like that necklace?"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Yep, Melanie! I've got some other stuff with sentimental value, like my hand-painted bowl. A friend made it for my 18th birthday ten years ago. The pattern and colors are awesome-- it reminds me of art and self-expression."
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: That sounds great, Caroline! It's awesome having stuff around that make us think of good connections and times. Actually, I just took my fam camping in the mountains last week - it was a really nice time together!"
+          }
+        ],
+        [
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Since we last spoke, some big things have happened. Last week I went to an LGBTQ+ pride parade. Everyone was so happy and it made me feel like I belonged. It showed me how much our community has grown, it was amazing!"
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Wow, Caroline, sounds like the parade was an awesome experience! It's great to see the love and support for the LGBTQ+ community. Congrats! Has this experience influenced your goals at all?"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Thanks, Mel! It really motivated me for sure. Talking to the community made me want to use my story to help others too - I'm still thinking that counseling and mental health is the way to go. I'm super excited to give back. "
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Wow, Caroline! That's great! I just signed up for a pottery class yesterday. It's like therapy for me, letting me express myself and get creative. Have you found any activities that make you feel the same way?"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Wow, Melanie! I'm getting creative too, just learning the piano. What made you try pottery?"
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: I'm a big fan of pottery - the creativity and skill is awesome. Plus, making it is so calming. Look at this!"
+          }
+        ],
+        [
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Hey Mel! Long time no talk. Lots has been going on since then!"
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: Hey Caroline! Missed you. Anything new? Spill the beans!"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Since our last chat, I've been looking into counseling or mental health work more. I'm passionate about helping people and making a positive impact. It's tough, but really rewarding too. Anything new happening with you?"
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: That's awesome, Caroline! Congrats on following your dreams. Yesterday I took the kids to the museum - it was so cool spending time with them and seeing their eyes light up!"
+          },
+          {
+            "role": "user",
+            "content": "[CAROLINE]: Melanie, that's a great pic! That must have been awesome. What were they so stoked about?"
+          },
+          {
+            "role": "assistant",
+            "content": "[MELANIE]: They were stoked for the dinosaur exhibit! They love learning about animals and the bones were so cool. It reminds me why I love being a mom."
+          }
+        ]
+      ]
+    },
+    "expect_format": "qa",
+    "expect_kind": "qa"
+  },
+  "jackrong-claude-opus-distill": {
+    "dataset_id": "Jackrong/Claude-opus-4.6-TraceInversion-9000x",
+    "sample_row": {
+      "id": "99c3df277cd7d3173ef329cc4c13c01f",
+      "messages": [
+        {
+          "role": "user",
+          "content": "A deep-sea monster rises from the waters once every hundred years to feast on a ship and sate its hunger. Over three hundred years, it has consumed 847 people. Ships have been built larger over time, so each new ship has twice as many peopl",
+          "thinking": null
+        },
+        {
+          "role": "assistant",
+          "content": "121. Let x be the number of people on the first ship. The second ship had 2x and the third had 4x. So x + 2x + 4x = 847, meaning 7x = 847, and x = 121.",
+          "thinking": "Let me work through this step by step.\n\nLet x be the number of people on the ship the monster ate in the first hundred years.\n\nSince each new ship has twice as many people as the last ship, the second ship had 2x people, and the third ship "
+        }
+      ],
+      "conversations": [
+        {
+          "from": "human",
+          "value": "A deep-sea monster rises from the waters once every hundred years to feast on a ship and sate its hunger. Over three hundred years, it has consumed 847 people. Ships have been built larger over time, so each new ship has twice as many peopl"
+        },
+        {
+          "from": "gpt",
+          "value": "<think>\nLet me work through this step by step.\n\nLet x be the number of people on the ship the monster ate in the first hundred years.\n\nSince each new ship has twice as many people as the last ship, the second ship had 2x people, and the thi"
+        }
+      ],
+      "input": "A deep-sea monster rises from the waters once every hundred years to feast on a ship and sate its hunger. Over three hundred years, it has consumed 847 people. Ships have been built larger over time, so each new ship has twice as many peopl",
+      "inverted_reasoning": "<think>\nLet me work through this step by step.\n\nLet x be the number of people on the ship the monster ate in the first hundred years.\n\nSince each new ship has twice as many people as the last ship, the second ship had 2x people, and the thi",
+      "reasoning_bubble": "Let me work through this step by step.\n\nLet x = number of people on the first ship.\n\nSecond ship: 2x\nThird ship: 4x\n\nx + 2x + 4x = 847\n7x = 847\nx = 121",
+      "output": "121. Let x be the number of people on the first ship. The second ship had 2x and the third had 4x. So x + 2x + 4x = 847, meaning 7x = 847, and x = 121.",
+      "domain": "math",
+      "meta": {
+        "input_tokens": 84,
+        "inverted_reasoning_tokens": 126,
+        "output_tokens": 37,
+        "teacher_model": "claude-opus-4-6",
+        "inversion_model": "Jackrong/Trace-Inverter-4B"
+      }
+    },
+    "expect_format": "sharegpt",
+    "expect_kind": "messages"
+  },
+  "agent-trajectory": {
+    "dataset_id": "agent-eto/eto-sft-trajectory",
+    "sample_row": {
+      "id": "alfworld_0",
+      "game_file": "data/json_2.1.1/train/pick_and_place_simple-ToiletPaper-None-ToiletPaperHanger-406/trial_T20190908_122807_136741",
+      "conversations": [
+        {
+          "from": "human",
+          "value": "Interact with a household to solve a task. Imagine you are an intelligent agent in a household environment and your target is to perform actions to complete the task goal. At the beginning of your interactions, you will be given the detaile"
+        },
+        {
+          "from": "gpt",
+          "value": "OK"
+        },
+        {
+          "from": "human",
+          "value": "You are in the middle of a room. Looking quickly around you, you see a bathtubbasin 1, a cabinet 2, a cabinet 1, a countertop 1, a garbagecan 1, a handtowelholder 1, a sinkbasin 1, a toilet 1, a toiletpaperhanger 1, and a towelholder 1.\n\nYo"
+        },
+        {
+          "from": "gpt",
+          "value": "Thought: I need to place a toilet paper roll on the toilet paper hanger. First, I should check if there's already a roll on the hanger or if it's empty.\nAction: go to toiletpaperhanger 1"
+        },
+        {
+          "from": "human",
+          "value": "Observation: On the toiletpaperhanger 1, you see nothing."
+        },
+        {
+          "from": "gpt",
+          "value": "Thought: The toilet paper hanger is empty, so I need to find a new roll of toilet paper to put on it.\nAction: go to toilet 1"
+        }
+      ]
+    },
+    "expect_format": "sharegpt",
+    "expect_kind": "messages"
+  },
+  "alpaca-cleaned": {
+    "dataset_id": "yahma/alpaca-cleaned",
+    "sample_row": {
+      "instruction": "Give three tips for staying healthy.",
+      "input": "",
+      "output": "1. Eat a balanced and nutritious diet: Make sure your meals are inclusive of a variety of fruits and vegetables, lean protein, whole grains, and healthy fats. This helps to provide your body with the essential nutrients to function at its b"
+    },
+    "expect_format": "alpaca",
+    "expect_kind": "messages"
+  },
+  "hermes-function-calling": {
+    "dataset_id": "NousResearch/hermes-function-calling-v1",
+    "sample_row": {
+      "id": "85f6c398-69c7-4df2-aed1-29d614a93a26",
+      "conversations": [
+        {
+          "from": "system",
+          "value": "You are a function calling AI model. You are provided with function signatures within <tools> </tools> XML tags. You may call one or more functions to assist with the user query. Don't make assumptions about what values to plug into functio"
+        },
+        {
+          "from": "human",
+          "value": "I've recently installed a new security system at my home, and I want to ensure everything is functioning as it should. Specifically, I'd like to start by checking the live feed from the camera located at the front door to monitor any activi"
+        },
+        {
+          "from": "gpt",
+          "value": "<tool_call>\n{\"name\": \"get_camera_live_feed\", \"arguments\": {\"camera_id\": \"front_door\", \"stream_quality\": \"1080p\"}}\n</tool_call>\n<tool_call>\n{\"name\": \"record_camera_feed\", \"arguments\": {\"camera_id\": \"front_door\", \"duration\": 30}}\n</tool_call>"
+        }
+      ],
+      "tools": "[{\"type\": \"function\", \"function\": {\"name\": \"get_camera_live_feed\", \"description\": \"Retrieves the live feed from a specified security camera.\", \"parameters\": {\"type\": \"object\", \"properties\": {\"camera_id\": {\"type\": \"string\", \"description\": \"T",
+      "category": "IoT and Home Automation",
+      "subcategory": "Security Camera Management",
+      "task": "View and Manage Security Camera Feeds"
+    },
+    "expect_format": "sharegpt",
+    "expect_kind": "messages"
+  }
+}

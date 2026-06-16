@@ -63,6 +63,29 @@ REGISTRY: dict[str, dict[str, Any]] = {
         "license": "see-dataset-card",
         "likes": 17, "downloads": 224,
     },
+    # Cleaned Alpaca instruction-tuning set (alpaca {instruction,input,output}); the
+    # de-facto general SFT baseline and the most-liked alpaca variant on the Hub.
+    # Validated 2026-06-16: alpaca_data_cleaned.json → 51,760 rows, 500/500 unify.
+    "alpaca-cleaned": {
+        "dataset_id": "yahma/alpaca-cleaned",
+        "file": "alpaca_data_cleaned.json",
+        "format": "json",
+        "tags": ["instruction", "sft", "general"],
+        "license": "cc-by-4.0",
+        "likes": 841, "downloads": 22143,
+    },
+    # Hermes function-calling (sharegpt conversations with system+tool roles and a
+    # <tools> spec); backs the tool/function-calling optimization row. The most-liked
+    # function-calling set that unifies as-is. Validated 2026-06-16: 1,893 rows.
+    "hermes-function-calling": {
+        "dataset_id": "NousResearch/hermes-function-calling-v1",
+        "file": "func-calling-singleturn.json",
+        "format": "json",
+        "tags": ["agent", "tool-use", "function-calling"],
+        "tag_field": "category",  # per-row task category → tags
+        "license": "apache-2.0",
+        "likes": 421, "downloads": 30541,
+    },
 }
 
 _RESOLVE = "https://huggingface.co/datasets/{repo}/resolve/main/{file}"
