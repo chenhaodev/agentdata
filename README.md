@@ -210,22 +210,27 @@ throughput    load 531,699/s   dedup+select 146,657/s
 （学生是 from-config 的小 GPT-2，分词器进程内构造）：
 
 ```text
-loop   trainer                       first → last loss
-SFT    trl.SFTTrainer（真实）          5.50 → 2.99   (−46%)
-DPO    trl.DPOTrainer（真实）          0.69 → 0.003  (−99%, rewards/acc→1.00)
+loop      trainer / 设置                         loss
+SFT       trl.SFTTrainer（真实）                  5.50 → 2.99    (−46%, 训练损失)
+DPO       trl.DPOTrainer（真实）                  0.69 → 0.003   (−99%, rewards/acc→1.00)
+真·端到端  真实数据(hf:alpaca-cleaned) + 真实模型   2.98 → 2.54    (−15%, 留出集 eval loss)
+          (distilgpt2, trl.SFTTrainer)           ← 在没训过的样本上变好 = 真泛化
 ```
 
 ```bash
-pip install -e '.[train]'   # 钉住 transformers<5，让真实 DPOTrainer 可导入
-python train/sft_trl.py     # agentdata --emit chat → 真·trl.SFTTrainer
-python train/dpo_trl.py     # agentdata --emit dpo  → 真·trl.DPOTrainer
-python train/dpo_min.py     # 同上，不依赖 trl（版本错位时兜底）
+pip install -e '.[train,hf]'   # 钉住 transformers<5，让真实 DPOTrainer 可导入
+python train/sft_trl.py        # agentdata --emit chat → 真·trl.SFTTrainer（玩具模型，秒级）
+python train/dpo_trl.py        # agentdata --emit dpo  → 真·trl.DPOTrainer
+python train/dpo_min.py        # 同上，不依赖 trl（版本错位时兜底）
+python train/e2e_real.py       # 真实数据+真实模型 distilgpt2 → 留出集 eval loss 下降（分钟级）
 ```
 
-数据文件一个字节都不改，SFT/DPO 都跑**真实的 TRL 训练器**。换成 `from_pretrained(...)` 即真实微调。
-（`dpo_min.py` 是不依赖 trl 的兜底，在 `trl`/`transformers` 版本错位时跑同一份文件、同样的 DPO 目标。）
-细节见 [`train/README.md`](train/README.md)，契约断言见 `tests/test_train.py`
-（`RUN_TRAIN=1` 跑真实训练，默认只校验 schema；CI 有专门的 `train-loop` job 在 pinned 依赖上验证）。
+`sft_trl.py`/`dpo_trl.py` 用玩具模型秒级验证「数据能喂进真实训练器且 loss 下降」；`e2e_real.py`
+再上一层：**真实 Hub 数据 + 真实预训练模型**，看**留出集**（没训过的样本）的 eval loss 是否下降——
+下降即真泛化，不是背答案。数据文件一个字节都不改。
+（`dpo_min.py` 是不依赖 trl 的兜底，版本错位时跑同一份文件、同样的 DPO 目标。）
+细节见 [`train/README.md`](train/README.md)，契约/训练断言见 `tests/test_train.py`
+（`RUN_TRAIN=1` 跑玩具训练、`RUN_E2E=1` 跑真实端到端，默认只校验 schema；CI 有专门的 `train-loop` job）。
 
 ---
 
@@ -332,7 +337,7 @@ src/agentdata/
 ├─ report.py       溯源/审计清单
 └─ __main__.py     agentdata CLI（argparse）
 tests/             test_smoke.py（离线 21 项）· test_registry_schema.py（离线 schema 快照）· test_live.py（RUN_LIVE=1）· test_train.py（RUN_TRAIN=1）
-train/             下游训练闭环：sft_trl.py（真·SFTTrainer）· dpo_trl.py（真·DPOTrainer）· dpo_min.py（兜底）· tiny_tokenizer.py
+train/             下游训练闭环：sft_trl.py（真·SFTTrainer）· dpo_trl.py（真·DPOTrainer）· e2e_real.py（真实数据+模型，留出集）· dpo_min.py（兜底）
 examples/          local_to_sft.yaml · diagnose_to_recipe.json
 benchmark.py       选择质量基准（去重/难度抬升/课程/吞吐）   demo.py  端到端离线演示
 ```
