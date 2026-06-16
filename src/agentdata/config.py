@@ -52,6 +52,14 @@ class Config:
     # --- diagnosis ---
     diagnose_threshold: float = 0.6  # below this per-category score = a gap
 
+    # --- extension points (fill-in YAML, no code) ---
+    # drop a YAML to add HF dataset recipes / tune the gap→recipe rules without editing Python
+    registry_path: str = ""  # extra HF registry entries (see examples/registry.yaml)
+    rules_path: str = ""  # extra/overriding selector rules (see examples/rules.yaml)
+
+    # --- performance ---
+    load_workers: int = 8  # parallel threads for multi-source loading (I/O-bound)
+
     @classmethod
     def from_env(cls) -> "Config":
         return cls(
@@ -70,4 +78,7 @@ class Config:
             physionet_password=os.getenv("PHYSIONET_PASSWORD", ""),
             github_token=os.getenv("GITHUB_TOKEN", ""),
             diagnose_threshold=float(os.getenv("DIAGNOSE_THRESHOLD", "0.6")),
+            registry_path=os.getenv("AGENTDATA_REGISTRY", ""),
+            rules_path=os.getenv("AGENTDATA_RULES", ""),
+            load_workers=int(os.getenv("LOAD_WORKERS", "8")),
         )

@@ -98,6 +98,34 @@ def test_router_dedup_across_specs():
     print("ok  source router dedupes across specs by item hash")
 
 
+def test_parallel_load_is_resilient_and_ordered():
+    """Parallel multi-source load: a bad spec is skipped (others still load), output
+    stays in spec order; all-fail re-raises."""
+    from agentdata.sources import SourceRouter
+
+    with tempfile.TemporaryDirectory() as d:
+        a = os.path.join(d, "a.jsonl")
+        b = os.path.join(d, "b.jsonl")
+        with open(a, "w", encoding="utf-8") as f:
+            f.write('{"text": "alpha"}\n')
+        with open(b, "w", encoding="utf-8") as f:
+            f.write('{"text": "bravo"}\n')
+        cfg = Config(data_dir=d, load_workers=8)
+        # good, bad (missing file), good → two items, in spec order, error recorded
+        r = SourceRouter([f"local:{a}", "local:/no/such.jsonl", f"local:{b}"], cfg)
+        items = r.load()
+        assert [it.text for it in items] == ["alpha", "bravo"], items
+        assert len(r.errors) == 1
+        # every spec fails → raise
+        allbad = SourceRouter(["local:/x.jsonl", "local:/y.jsonl"], cfg)
+        try:
+            allbad.load()
+            assert False, "expected raise when all specs fail"
+        except Exception:
+            pass
+    print("ok  parallel source load is resilient, ordered, and fails loudly when total")
+
+
 # -- unify -------------------------------------------------------------------
 
 def test_unify_roundtrip_formats():
@@ -241,6 +269,41 @@ def test_diagnose_memory_benchmark():
     assert recipe.regime == "sft" and recipe.emit == "chat"
     assert recipe.sources == ["hf:locomo"] and recipe.generate.get("recombine")
     print("ok  diagnose ingests an agentmem memory benchmark -> LoCoMo recipe")
+
+
+# -- extensibility (fill-in YAML, no code) -----------------------------------
+
+def test_registry_yaml_extends_without_code():
+    from agentdata.sources.huggingface import HuggingFaceSource
+
+    with tempfile.TemporaryDirectory() as d:
+        reg = os.path.join(d, "registry.yaml")
+        with open(reg, "w", encoding="utf-8") as f:
+            f.write("acme-set:\n  dataset_id: acme/data\n  file: data/t.jsonl\n"
+                    "  format: jsonl\n  tags: [demo]\n")
+        src = HuggingFaceSource(Config(registry_path=reg))
+        assert "acme-set" in src.list()                       # new recipe, no code edit
+        assert src._resolve("acme-set")["dataset_id"] == "acme/data"
+        # built-ins still present
+        assert "locomo" in src.list()
+    print("ok  registry YAML adds HF recipes without touching Python")
+
+
+def test_rules_yaml_extends_and_overrides():
+    from agentdata.diagnose import selector
+
+    with tempfile.TemporaryDirectory() as d:
+        rules = os.path.join(d, "rules.yaml")
+        with open(rules, "w", encoding="utf-8") as f:
+            f.write("safety:\n  regime: sft\n  dataset_types: [safety]\n"
+                    "  sources: [local]\n  emit: chat\n  generate: {synth: true}\n")
+        dx, recipe = Diagnoser(Config(rules_path=rules)).diagnose(
+            report={"scores": {"safety": 0.2}})
+        assert "safety" in dx.gaps
+        assert recipe.emit == "chat" and recipe.generate.get("synth")
+        # a path-less load is just the built-ins (no surprise side effects)
+        assert "safety" not in selector.load_rules("")
+    print("ok  rules YAML adds/overrides diagnosis rules without touching Python")
 
 
 # -- generate ----------------------------------------------------------------

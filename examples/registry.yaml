@@ -1,0 +1,22 @@
+# Extra HuggingFace dataset recipes — fill in and point at it with:
+#   export AGENTDATA_REGISTRY=examples/registry.yaml
+# Then `agentdata build --source hf:<alias>` works with no code change.
+# Each alias merges over (or adds to) the built-in registry. `file`/`format` pin a
+# specific data file for datasets that don't follow the default split layout;
+# omit them to fall back to datasets.load_dataset(dataset_id, split).
+
+my-reasoning-set:
+  dataset_id: some-org/my-reasoning-dataset
+  file: data/train.jsonl          # optional; JSONL/JSON/CSV/Parquet
+  format: jsonl                   # optional; overrides the file extension
+  tags: [reasoning, cot]
+  tag_field: domain               # optional; copy this per-row column into meta.tags
+  license: see-dataset-card
+  likes: 0                        # popularity snapshot (informational)
+  downloads: 0
+
+# a generic id with no file: uses load_dataset(dataset_id, split)
+my-generic-set:
+  dataset_id: tatsu-lab/alpaca
+  split: train
+  tags: [instruction]

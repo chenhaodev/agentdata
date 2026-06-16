@@ -15,6 +15,7 @@ with install guidance (the agentmem optional-dep pattern).
 from __future__ import annotations
 
 import os
+import tempfile
 import urllib.request
 from typing import Any
 
@@ -67,14 +68,31 @@ REGISTRY: dict[str, dict[str, Any]] = {
 _RESOLVE = "https://huggingface.co/datasets/{repo}/resolve/main/{file}"
 
 
+def load_registry(path: str = "") -> dict[str, dict[str, Any]]:
+    """Built-in registry merged with an optional user YAML — so adding a dataset
+    recipe is a fill-in-YAML edit, not a code change. The YAML is `{alias: {dataset_id,
+    file, format, tags, ...}}`; per-alias keys override the built-in. See
+    examples/registry.yaml."""
+    merged = {alias: dict(entry) for alias, entry in REGISTRY.items()}
+    if path and os.path.exists(path):
+        import yaml  # pyyaml is a core dep
+
+        with open(path, encoding="utf-8") as f:
+            extra = yaml.safe_load(f) or {}
+        for alias, entry in extra.items():
+            merged[alias] = {**merged.get(alias, {}), **(entry or {})}
+    return merged
+
+
 class HuggingFaceSource:
     name = "huggingface"
 
     def __init__(self, config: Config | None = None):
         self.config = config or Config()
+        self.registry = load_registry(self.config.registry_path)
 
     def list(self, filters: dict[str, Any] | None = None) -> list[str]:
-        return sorted(REGISTRY.keys())
+        return sorted(self.registry.keys())
 
     def search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
         """Discover Hub datasets ranked by popularity (likes). Likes/downloads are a
@@ -96,8 +114,8 @@ class HuggingFaceSource:
 
     def _resolve(self, spec: str) -> dict[str, Any]:
         """Resolve a spec to a registry entry, or a generic {dataset_id, split}."""
-        if spec in REGISTRY:
-            return dict(REGISTRY[spec])
+        if spec in self.registry:
+            return dict(self.registry[spec])
         dataset_id, _, split = spec.partition(":")
         return {"dataset_id": dataset_id, "split": split or "train", "tags": [], "license": ""}
 
@@ -136,15 +154,20 @@ class HuggingFaceSource:
         if token:
             headers["Authorization"] = f"Bearer {token}"
         req = urllib.request.Request(_RESOLVE.format(repo=repo, file=file), headers=headers)
-        # download to a temp file, then atomically swap in — a failed fetch must not
-        # clobber a previously-good cache or leave a 0-byte file readers would parse.
-        tmp = dest + ".tmp"
+        # download to a unique temp file, then atomically swap in — a failed fetch must
+        # not clobber a good cache or leave a 0-byte file, and concurrent downloads of
+        # the same spec (parallel router) must not race on a shared temp path.
+        fd, tmp = tempfile.mkstemp(dir=dest_dir, suffix=".tmp")
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp, open(tmp, "wb") as f:
-                f.write(resp.read())
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                os.write(fd, resp.read())
+            os.close(fd)
+            fd = -1  # closed; don't double-close in finally
             os.replace(tmp, dest)
         finally:
-            if os.path.exists(tmp):
+            if fd != -1:
+                os.close(fd)
+            if os.path.exists(tmp):  # only if replace didn't happen
                 os.remove(tmp)
         return dest
 

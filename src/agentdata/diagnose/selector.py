@@ -9,6 +9,7 @@ are costly; verifiable GRPO needs ~500–1000 good pairs, not volume).
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 
 from ..types import Diagnosis, Recipe
@@ -74,15 +75,40 @@ def _dedup_keep_order(seq: list[str]) -> list[str]:
     return out
 
 
-def select(diagnosis: Diagnosis, out_dir: str = "out", name: str = "dataset") -> Recipe:
-    """Compose the matched rules into one Recipe."""
-    rules = [RULES[g] for g in diagnosis.gaps if g in RULES] or [_DEFAULT]
+def load_rules(path: str = "") -> dict[str, Rule]:
+    """Built-in gap→recipe rules merged with an optional user YAML — so tuning the
+    diagnosis brain (or adding a gap) is a fill-in-YAML edit, not a code change. YAML
+    is `{gap: {regime, dataset_types, sources, emit, generate}}`; per-gap entries
+    override the built-in. See examples/rules.yaml."""
+    rules = dict(RULES)
+    if path and os.path.exists(path):
+        import yaml  # pyyaml is a core dep
 
-    regime = _dominant_regime({r.regime for r in rules})
-    dataset_types = _dedup_keep_order([t for r in rules for t in r.dataset_types])
-    sources = _dedup_keep_order([s for r in rules for s in r.sources])
+        with open(path, encoding="utf-8") as f:
+            extra = yaml.safe_load(f) or {}
+        for gap, spec in extra.items():
+            spec = spec or {}
+            rules[gap] = Rule(
+                regime=spec.get("regime", "sft"),
+                dataset_types=list(spec.get("dataset_types", [])),
+                sources=list(spec.get("sources", [])),
+                emit=spec.get("emit", "sft"),
+                generate=dict(spec.get("generate", {})),
+            )
+    return rules
+
+
+def select(diagnosis: Diagnosis, out_dir: str = "out", name: str = "dataset",
+           rules: dict[str, Rule] | None = None) -> Recipe:
+    """Compose the matched rules into one Recipe."""
+    table = rules if rules is not None else RULES
+    matched = [table[g] for g in diagnosis.gaps if g in table] or [_DEFAULT]
+
+    regime = _dominant_regime({r.regime for r in matched})
+    dataset_types = _dedup_keep_order([t for r in matched for t in r.dataset_types])
+    sources = _dedup_keep_order([s for r in matched for s in r.sources])
     generate: dict = {}
-    for r in rules:
+    for r in matched:
         generate.update(r.generate)
 
     # emit: align to the dominant regime, else the first matched rule's emit.
@@ -92,7 +118,7 @@ def select(diagnosis: Diagnosis, out_dir: str = "out", name: str = "dataset") ->
     # Explicit DPO regime keeps the DPO export — but only paired sources carrying a
     # `rejected` answer will yield rows.
     emit = {"pretrain": "pretrain", "continue_pretrain": "pretrain",
-            "grpo": "sft", "dpo": "dpo"}.get(regime, rules[0].emit)
+            "grpo": "sft", "dpo": "dpo"}.get(regime, matched[0].emit)
 
     return Recipe(
         regime=regime,

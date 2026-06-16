@@ -22,21 +22,19 @@ from .builder import DatasetBuilder, load_recipe
 from .config import Config
 from .diagnose import Diagnoser
 from .sources import build_source
-from .sources.huggingface import REGISTRY
+from .sources.huggingface import HuggingFaceSource
 from .types import Recipe
 
 
 def _cmd_sources(args, config: Config) -> int:
     if args.search:  # popularity-ranked Hub discovery (likes matter)
-        from .sources.huggingface import HuggingFaceSource
-
         print(f"huggingface datasets for {args.search!r} (by likes):")
         for d in HuggingFaceSource(config).search(args.search, limit=args.limit):
             print(f"  likes={d['likes']:<5} dl={d['downloads']:<8} hf:{d['id']}")
         return 0
     print("sources: local, huggingface (hf), kaggle, physionet, github (gh)\n")
-    print("huggingface named recipes (likes@registration):")
-    for alias, info in REGISTRY.items():
+    print("huggingface named recipes (built-in + AGENTDATA_REGISTRY yaml):")
+    for alias, info in HuggingFaceSource(config).registry.items():
         pop = f"likes={info.get('likes', '?')} dl={info.get('downloads', '?')}"
         print(f"  hf:{alias}  -> {info['dataset_id']}  [{pop}]  {info.get('tags', [])}")
     print("\nlocal files in DATA_DIR:")

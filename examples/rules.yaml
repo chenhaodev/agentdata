@@ -1,0 +1,21 @@
+# Extra / overriding gap→recipe rules for the diagnosis "brain" — fill in and use:
+#   export AGENTDATA_RULES=examples/rules.yaml
+# Each key is a capability gap (e.g. a category from your eval report). When that
+# gap is diagnosed, its rule contributes (regime, dataset_types, sources, emit,
+# generate) to the composed Recipe. A key matching a built-in gap overrides it.
+
+# add a brand-new gap your evals report:
+safety:
+  regime: sft
+  dataset_types: [safety, domain]
+  sources: [local]
+  emit: chat
+  generate: {synth: true}
+
+# override how an existing gap is handled (e.g. point math at your own dataset):
+math:
+  regime: grpo
+  dataset_types: [math, reasoning]
+  sources: [hf:jackrong-claude-opus-distill, local:my_math.jsonl]
+  emit: sft
+  generate: {gepa: true}

@@ -326,6 +326,28 @@ alpaca↔sharegpt↔chatml 往返、去重/课程的确定性、DUA 闸、诊断
 
 ---
 
+## 扩展与性能
+
+**扩展：两张最常改的表已变成「填 YAML，不改代码」。** 数据源注册表（哪些 HF 数据集）和诊断规则
+（短板→配方的「大脑」）原先都写死在 Python 里；现在内置默认 + 可选 YAML 合并：
+
+```bash
+export AGENTDATA_REGISTRY=examples/registry.yaml   # 加 HF 数据集配方（填 alias→dataset_id/file/tags）
+export AGENTDATA_RULES=examples/rules.yaml         # 加/改 gap→recipe 规则（填 regime/sources/emit/generate）
+agentdata sources                                  # 新配方立即出现，零代码改动
+```
+
+加新「源 / 产出格式」仍是写一个小类 + 工厂登记一行（Protocol + 工厂模式，见 [`CONTRIBUTING.md`](./CONTRIBUTING.md)）。
+另有 1 个 `/agentdata` skill（轻量 markdown）与 `examples/` 下的填空式 recipe/registry/rules 模板。
+
+**性能：I/O 密集处并行，重复计算只算一次。**
+- **多源加载并行**：`SourceRouter` 把多个 spec（各自是独立的网络/磁盘 I/O）用线程池扇出，`map` 保序 →
+  去重输出仍确定。实测 4 个带延迟的源：**串行 1.22s → 并行 0.31s（~4×）**（`LOAD_WORKERS` 可调）。
+- **下载缓存**：HF 走 hub 缓存 + resolve 直链的命中复用（原子写），重复构建不重复下载。
+- **课程打分一次性**：难度分在选择前算一次并复用（38 万条 2.8s），不在排序里反复重算。
+
+---
+
 ## 设计取舍
 
 - **为什么不直接用 `datasets.load_dataset` 一把梭**：很多真实数据集（LoCoMo、Jackrong）不符合默认 split 布局，

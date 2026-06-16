@@ -30,7 +30,8 @@ class Diagnoser:
 
     def to_recipe(self, diagnosis: Diagnosis, out_dir: str | None = None,
                   name: str = "dataset") -> Recipe:
-        return selector.select(diagnosis, out_dir=out_dir or self.config.out_dir, name=name)
+        return selector.select(diagnosis, out_dir=out_dir or self.config.out_dir, name=name,
+                               rules=selector.load_rules(self.config.rules_path))
 
     def diagnose(self, *, report: dict[str, Any] | None = None,
                  report_file: str | None = None, scan_path: str | None = None,

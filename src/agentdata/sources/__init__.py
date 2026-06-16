@@ -80,15 +80,32 @@ class SourceRouter:
             items.extend(source.load(found))
         return items
 
+    def _safe_load(self, spec: str) -> list[DataItem] | None:
+        try:
+            return self._load_one(spec)
+        except Exception as e:  # resilience: record + skip; caller keeps the rest
+            self.errors.append((spec, e))
+            return None
+
+    def _load_all(self) -> list[list[DataItem] | None]:
+        """Load every spec, results aligned with self.specs. Specs are independent
+        network/disk I/O, so fan them out across threads; `map` preserves order so
+        the deduped output stays deterministic. One spec ⇒ no thread overhead."""
+        if len(self.specs) == 1 or self.config.load_workers <= 1:
+            return [self._safe_load(s) for s in self.specs]
+        from concurrent.futures import ThreadPoolExecutor
+
+        workers = min(self.config.load_workers, len(self.specs))
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            return list(ex.map(self._safe_load, self.specs))
+
     def load(self) -> list[DataItem]:
+        results = self._load_all()
         out: list[DataItem] = []
         seen: set[str] = set()
         failures = 0
-        for spec in self.specs:
-            try:
-                items = self._load_one(spec)
-            except Exception as e:  # resilience: keep loading the other specs
-                self.errors.append((spec, e))
+        for items in results:  # spec order → dedup keeps first occurrence, deterministic
+            if items is None:
                 failures += 1
                 continue
             for it in items:
@@ -97,7 +114,7 @@ class SourceRouter:
                     continue
                 seen.add(h)
                 out.append(it)
-        if failures and failures == len(self.specs):
+        if failures == len(self.specs):  # per-call count (idempotent across load() calls)
             raise self.errors[-1][1]  # every spec failed — surface it
         return out
 
