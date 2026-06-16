@@ -200,6 +200,28 @@ throughput    load 531,699/s   dedup+select 146,657/s
 > 信号清晰时配额命中得分毫不差；换成扁平的真实医疗语料（几乎没有 `<think>`、长度均匀），基准会**如实显示**
 > 难度信号稀薄、课程偏置效果有限——不藏不掖。
 
+### 下游训练闭环：产出真的能训出模型（`train/`）
+
+“训练就绪”不是自我宣称。`train/` 把产物喂给标准训练器，看 loss 是否真的下降——离线、CPU、零下载
+（学生是 from-config 的小 GPT-2，分词器进程内构造）：
+
+```text
+loop   trainer                  first → last loss
+SFT    trl.SFTTrainer（真实）     5.50 → 2.99   (−46%)
+DPO    标准 DPO 目标（自带实现）   0.70 → 0.04   (−94%, pref-acc→1.00)
+```
+
+```bash
+pip install -e '.[train]'
+python train/sft_trl.py     # agentdata --emit chat → 真·trl.SFTTrainer
+python train/dpo_min.py     # agentdata --emit dpo  → 标准 DPO 目标
+```
+
+数据文件一个字节都不改：SFT 用的是**真实的 `trl.SFTTrainer`**；DPO 因本机 `trl`/`transformers`
+版本错位无法导入其 `DPOTrainer`，故在**同一份** `{prompt,chosen,rejected}` 上跑标准 DPO 目标
+（参考模型=初始策略冻结副本）。换成 `from_pretrained(...)` 即真实微调。细节见 [`train/README.md`](train/README.md)，
+契约断言见 `tests/test_train.py`（`RUN_TRAIN=1` 跑真实训练，默认只校验 schema）。
+
 ---
 
 ## 为什么这样设计
@@ -304,7 +326,8 @@ src/agentdata/
 ├─ builder.py      DatasetBuilder 门面（吃 Recipe 对象 / dict / yaml / json）
 ├─ report.py       溯源/审计清单
 └─ __main__.py     agentdata CLI（argparse）
-tests/             test_smoke.py（离线 14 项）· test_live.py（RUN_LIVE=1 真连 HF）
+tests/             test_smoke.py（离线 21 项）· test_live.py（RUN_LIVE=1 真连 HF）· test_train.py（RUN_TRAIN=1 真训练）
+train/             下游训练闭环：sft_trl.py（真·trl.SFTTrainer）· dpo_min.py（标准 DPO）· tiny_tokenizer.py
 examples/          local_to_sft.yaml · diagnose_to_recipe.json
 benchmark.py       选择质量基准（去重/难度抬升/课程/吞吐）   demo.py  端到端离线演示
 ```
@@ -314,9 +337,10 @@ benchmark.py       选择质量基准（去重/难度抬升/课程/吞吐）   d
 ## 测试与基准
 
 ```bash
-python tests/test_smoke.py     # 离线：不联网、不需密钥（14 项）
+python tests/test_smoke.py     # 离线：不联网、不需密钥（21 项）
 pytest tests/                  # 同上，pytest 可发现
 RUN_LIVE=1 pytest tests/       # 选做：真连 HF 注册表（默认自动跳过）
+RUN_TRAIN=1 python tests/test_train.py   # 选做：真训练（需 .[train]），默认只校验 schema
 python benchmark.py            # 选择质量基准（用 ../dataset 或合成池）
 ```
 
