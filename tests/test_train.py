@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from agentdata import Config, DatasetBuilder, Recipe  # noqa: E402
 
 TRAIN = os.getenv("RUN_TRAIN") == "1"
+E2E = os.getenv("RUN_E2E") == "1"  # real Hub data + real pretrained model (network + minutes)
 _SEED = os.path.join(os.path.dirname(__file__), "..", "train", "fixtures", "chat_seed.jsonl")
 
 
@@ -94,6 +95,22 @@ def test_dpo_loop_reduces_loss():
     first, last = train(os.path.abspath(_SEED), steps=30, size=0)
     assert last < first, f"DPO loss did not fall: {first:.3f} -> {last:.3f}"
     print(f"ok  DPO loop reduces loss {first:.3f} -> {last:.3f}  [{which}]")
+
+
+def test_e2e_real_holdout_improves():
+    # the strongest proof: real Hub data + real pretrained model, held-out loss falls.
+    # opt-in (RUN_E2E=1) — pulls a dataset and a model and trains for a few minutes.
+    if not E2E:
+        print("skip test_e2e_real_holdout_improves (RUN_E2E != 1)")
+        return
+    from train.e2e_real import train
+
+    endpoint = os.getenv("HF_ENDPOINT_E2E")  # e.g. https://huggingface.co if the mirror is down
+    if endpoint:
+        os.environ["HF_ENDPOINT"] = endpoint
+    before, after = train("hf:alpaca-cleaned", "distilgpt2", size=200, steps=40)
+    assert after < before, f"held-out eval loss did not fall: {before:.3f} -> {after:.3f}"
+    print(f"ok  e2e real held-out eval loss {before:.3f} -> {after:.3f}")
 
 
 def main():
