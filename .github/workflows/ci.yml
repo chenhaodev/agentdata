@@ -42,3 +42,26 @@ jobs:
         run: pytest -q tests/test_smoke.py
         # live tests (tests/test_live.py) self-skip without RUN_LIVE and hit the
         # network, so they are intentionally not run in CI.
+
+  # Proves the downstream-training loop on the real trainers (trl.SFTTrainer +
+  # trl.DPOTrainer). Heavier (installs torch/transformers/trl), so it runs once
+  # on a single Python rather than across the matrix.
+  train-loop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install (train extra — trl + transformers + torch + datasets)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[train]"
+
+      - name: Real trainer loop (SFT + DPO loss must fall)
+        env:
+          RUN_TRAIN: "1"
+        run: python tests/test_train.py

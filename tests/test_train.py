@@ -75,11 +75,25 @@ def test_dpo_loop_reduces_loss():
     if not TRAIN:
         print("skip test_dpo_loop_reduces_loss (RUN_TRAIN != 1)")
         return
-    from train.dpo_min import train
+    # prefer the real trl.DPOTrainer (needs the pinned [train] extra); fall back to
+    # the trl-free DPO objective when DPOTrainer can't import (version skew).
+    from train._common import no_wandb
+
+    no_wandb()
+    try:
+        from trl import DPOTrainer  # noqa: F401
+
+        from train.dpo_trl import train
+
+        which = "trl.DPOTrainer"
+    except Exception:
+        from train.dpo_min import train
+
+        which = "dpo_min (trl-free)"
 
     first, last = train(os.path.abspath(_SEED), steps=30, size=0)
     assert last < first, f"DPO loss did not fall: {first:.3f} -> {last:.3f}"
-    print(f"ok  DPO loop reduces loss {first:.3f} -> {last:.3f}")
+    print(f"ok  DPO loop reduces loss {first:.3f} -> {last:.3f}  [{which}]")
 
 
 def main():

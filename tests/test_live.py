@@ -2,9 +2,11 @@
 
 Exercises the real network paths: the named HuggingFace registry recipes
 (`hf:locomo`, `hf:jackrong-claude-opus-distill`) → unify → emit. The registry ids
-+ data files were validated against the Hub on 2026-06-15:
++ data files were validated against the Hub (2026-06-15 / 2026-06-16):
   - Percena/locomo-mc10 :: data/locomo_mc10.json  → 1986 QA items (question_type tags)
   - Jackrong/Claude-opus-4.6-TraceInversion-9000x  → 8669 message items (<think> traces)
+  - yahma/alpaca-cleaned :: alpaca_data_cleaned.json  → 51,760 instruction items
+  - NousResearch/hermes-function-calling-v1 :: func-calling-singleturn.json  → 1893 items
 Downloads can be slow when the Hub's Xet/CDN backend is unreachable (the source
 falls back to a direct resolve-URL fetch); these are opt-in and not run in CI.
 """
@@ -92,6 +94,44 @@ def test_live_hf_build_roundtrip():
         assert os.path.exists(result.manifest.path)
         assert result.report["provenance"]["by_source"].get("huggingface", 0) > 0
     print(f"ok  live HF build: {result.manifest.count} SFT samples from hf:locomo")
+
+
+def test_live_alpaca_cleaned_registry():
+    """The cleaned-Alpaca recipe loads as instruction (alpaca) chat items."""
+    if not LIVE:
+        return _skip("RUN_LIVE != 1")
+    if not _have_hf():
+        return _skip("datasets/huggingface_hub not installed")
+
+    from agentdata.config import Config
+    from agentdata.sources import build_source
+
+    items = build_source("hf", Config(cache_dir=".data/cache")).load("alpaca-cleaned")
+    assert items, "alpaca-cleaned returned no items"
+    assert all(it.kind == "messages" for it in items[:20])
+    assert all(it.meta.get("format") == "alpaca" for it in items[:20])
+    print(f"ok  live alpaca-cleaned: {len(items)} instruction items")
+
+
+def test_live_hermes_function_calling_registry():
+    """The Hermes function-calling recipe loads as sharegpt items with tool/system
+    roles and per-row category tags."""
+    if not LIVE:
+        return _skip("RUN_LIVE != 1")
+    if not _have_hf():
+        return _skip("datasets/huggingface_hub not installed")
+
+    from agentdata.config import Config
+    from agentdata.emit.convert import to_messages
+    from agentdata.sources import build_source
+
+    items = build_source("hf", Config(cache_dir=".data/cache")).load("hermes-function-calling")
+    assert items, "hermes-function-calling returned no items"
+    roles = {m["role"] for it in items[:50] for m in to_messages(it)}
+    assert {"system", "assistant"} <= roles, roles
+    cats = {t for it in items for t in it.meta.get("tags", [])}
+    assert cats - {"agent", "tool-use", "function-calling"}, "no per-row category tags"
+    print(f"ok  live hermes-function-calling: {len(items)} items, roles={sorted(roles)}")
 
 
 def test_live_github_source():
