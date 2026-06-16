@@ -94,6 +94,26 @@ def test_live_hf_build_roundtrip():
     print(f"ok  live HF build: {result.manifest.count} SFT samples from hf:locomo")
 
 
+def test_live_github_source():
+    """GitHub source against a public repo (no creds): code/docs → KIND_TEXT items."""
+    if not LIVE:
+        return _skip("RUN_LIVE != 1")
+    try:
+        import requests  # noqa: F401
+    except ImportError:
+        return _skip("requests not installed (pip install 'agentdata[github]')")
+
+    from agentdata.config import Config
+    from agentdata.sources import build_source
+
+    repo = os.getenv("AGENTDATA_LIVE_GH", "chenhaodev/agentdata")
+    items = build_source("gh", Config(cache_dir=".data/cache")).load(repo)
+    assert items, f"github source returned nothing for {repo}"
+    assert all(it.kind == "text" and it.meta.get("source") == "github" for it in items)
+    assert any(it.meta.get("path", "").endswith(".py") for it in items)
+    print(f"ok  live github: {len(items)} text items from {repo}")
+
+
 def main():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:
