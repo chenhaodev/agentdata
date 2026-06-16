@@ -1,0 +1,12 @@
+{"messages": [{"role": "user", "content": "What does the spleen do?"}, {"role": "assistant", "content": "The spleen filters blood, recycles old red cells, and stores white cells for immune defense."}]}
+{"messages": [{"role": "user", "content": "Define tachycardia."}, {"role": "assistant", "content": "Tachycardia is a resting heart rate above 100 beats per minute."}]}
+{"messages": [{"role": "user", "content": "What is the first-line treatment for anaphylaxis?"}, {"role": "assistant", "content": "Intramuscular epinephrine into the anterolateral thigh is the first-line treatment for anaphylaxis."}]}
+{"messages": [{"role": "user", "content": "Where is the mitral valve?"}, {"role": "assistant", "content": "The mitral valve sits between the left atrium and the left ventricle of the heart."}]}
+{"messages": [{"role": "user", "content": "What electrolyte abnormality causes peaked T waves?"}, {"role": "assistant", "content": "Hyperkalemia, an elevated serum potassium, classically causes peaked T waves on the ECG."}]}
+{"messages": [{"role": "user", "content": "What is the function of insulin?"}, {"role": "assistant", "content": "Insulin lowers blood glucose by driving glucose uptake into muscle and fat and suppressing hepatic glucose output."}]}
+{"messages": [{"role": "user", "content": "Name the four chambers of the heart."}, {"role": "assistant", "content": "The four chambers are the right atrium, right ventricle, left atrium, and left ventricle."}]}
+{"messages": [{"role": "user", "content": "What does a high anion gap indicate?"}, {"role": "assistant", "content": "A high anion gap indicates a metabolic acidosis from added acid, such as lactate, ketones, or toxins."}]}
+{"messages": [{"role": "user", "content": "What is the role of hemoglobin?"}, {"role": "assistant", "content": "Hemoglobin in red blood cells binds oxygen in the lungs and releases it to the tissues."}]}
+{"messages": [{"role": "user", "content": "Define hypotension."}, {"role": "assistant", "content": "Hypotension is abnormally low blood pressure, generally a systolic reading below 90 mmHg."}]}
+{"messages": [{"role": "user", "content": "What organ produces bile?"}, {"role": "assistant", "content": "The liver produces bile, which is stored and concentrated in the gallbladder."}]}
+{"messages": [{"role": "user", "content": "What is the most common cause of community-acquired pneumonia?"}, {"role": "assistant", "content": "Streptococcus pneumoniae is the most common cause of community-acquired pneumonia."}]}

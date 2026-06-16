@@ -29,6 +29,7 @@ kaggle = ["kaggle>=1.6"]                  # kaggle source
 physionet = ["wfdb>=4.0", "requests>=2.28"]  # physionet source (DUA-gated)
 github = ["requests>=2.28"]               # github raw/clone source
 gen = ["anthropic>=0.40", "numpy>=1.24"]  # synthetic generation (teacher LLM)
+train = ["trl>=0.9", "transformers>=4.40", "torch>=2.0", "datasets>=2.14.0"]  # downstream-training proof (train/)
 all = [
   "datasets>=2.14.0",
   "kaggle>=1.6",
